@@ -189,6 +189,28 @@ public class ClientConnection implements Runnable {
 				return;
 			}
 			synchronized(keyvalue){
+				if(receivedMessage.getValue().equals("null")){
+					if(keyvalue.get(receivedMessage.getKey()) != null) {
+						sentMessage.setValue(keyvalue.get(receivedMessage.getKey()));
+						keyvalue.remove(receivedMessage.getKey());
+						sentMessage.setStatusType(StatusType.DELETE_SUCCESS);
+					} else if(persistance.lookup(receivedMessage.getKey()) != null) {
+						persistance.remove(receivedMessage.getKey());
+						sentMessage.setStatusType(StatusType.DELETE_SUCCESS);
+					} else {
+						sentMessage.setStatusType(StatusType.DELETE_ERROR);						
+					}
+
+					sentMessage.setKey(receivedMessage.getKey());
+					try {
+						sendMessage(sentMessage.serialize());
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					return;
+				}
+				
 				if(keyvalue.size() == cacheSize){
 					String key = strategy.get();
 					String value = keyvalue.get(key);
@@ -216,7 +238,32 @@ public class ClientConnection implements Runnable {
 				}
 			}
 			break;
-
+		case GET:
+			if(receivedMessage.getKey() == null){
+				logger.error("not valid key");
+				return;
+			}
+			String value = null;
+			if(keyvalue.get(receivedMessage.getKey()) != null){
+				value = keyvalue.get(receivedMessage.getKey());
+			} else {
+				value = persistance.lookup(receivedMessage.getKey());
+			}
+			if(value != null){
+				sentMessage.setStatusType(StatusType.GET_SUCCESS);
+				sentMessage.setKey(receivedMessage.getKey());
+				sentMessage.setValue(value);
+			} else {
+				sentMessage.setStatusType(StatusType.GET_ERROR);
+				sentMessage.setKey(receivedMessage.getKey());				
+			}
+			try {
+				sendMessage(sentMessage.serialize());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			break;
 		}
 	}
 }

@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 
 import common.messages.KVMessage;
 import common.messages.TextMessage;
+import common.messages.KVMessage.StatusType;
 import client.ClientSocketListener;
 import client.KVStore;
 import logger.LogSetup;
@@ -74,8 +75,7 @@ public class KVClient implements ClientSocketListener{
 					String [] keyvaluepair = keyvalue[1].split(",");
 					if(keyvaluepair.length >= 2){
 						try {
-							KVMessage receivedMessage = client.put(keyvaluepair[0], keyvaluepair[1]);
-
+							client.put(keyvaluepair[0], keyvaluepair[1]);
 						} catch (Exception e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -90,6 +90,20 @@ public class KVClient implements ClientSocketListener{
 				}
 			} else {
 				printError("No message passed!");
+			}
+			
+		} else if(tokens[0].equals("get")){
+			if(tokens.length >= 2){
+				if(client != null && client.isRunning()){
+					try {
+						client.get(tokens[1]);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			} else {
+				printError("no key passed!");
 			}
 			
 		} else if(tokens[0].equals("disconnect")) {
