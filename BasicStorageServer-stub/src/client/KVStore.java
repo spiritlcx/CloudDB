@@ -43,12 +43,10 @@ public class KVStore extends Thread implements KVCommInterface {
 			output = clientSocket.getOutputStream();
 			input = clientSocket.getInputStream();
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			logger.error(e.getMessage());
 			return;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			logger.error(e.getMessage());
 			return;
@@ -108,7 +106,7 @@ public class KVStore extends Thread implements KVCommInterface {
 //	}
 	
 	public synchronized void closeConnection() {
-		logger.info("try to close connection ...");
+		logger.info("Trying to close connection ...");
 		
 		try {
 			tearDownConnection();
@@ -122,13 +120,13 @@ public class KVStore extends Thread implements KVCommInterface {
 	
 	private void tearDownConnection() throws IOException {
 		setRunning(false);
-		logger.info("tearing down the connection ...");
+		logger.info("Tearing down the connection ...");
 		if (clientSocket != null) {
 			input.close();
 			output.close();
 			clientSocket.close();
 			clientSocket = null;
-			logger.info("connection closed!");
+			logger.info("Connection closed!");
 		}
 	}
 	
@@ -217,6 +215,7 @@ public class KVStore extends Thread implements KVCommInterface {
 		return msg;
     }
  	
+	@Override
 	public void connect() throws Exception {
 		// TODO Auto-generated method stub
 	
@@ -229,7 +228,6 @@ public class KVStore extends Thread implements KVCommInterface {
 
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
-		// TODO Auto-generated method stub
 		TextMessage sentMessage = new TextMessage();
 		sentMessage.setStatusType(StatusType.PUT);
 		sentMessage.setKey(key);
@@ -248,7 +246,6 @@ public class KVStore extends Thread implements KVCommInterface {
 
 	@Override
 	public KVMessage get(String key) throws Exception {
-		// TODO Auto-generated method stub
 		TextMessage sentMessage = new TextMessage();
 		sentMessage.setStatusType(StatusType.GET);
 		sentMessage.setKey(key);
