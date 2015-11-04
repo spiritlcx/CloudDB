@@ -41,7 +41,7 @@ public class KVClient implements ClientSocketListener{
 	}
 	
 	private void handleCommand(String cmdLine) {
-		String[] tokens = cmdLine.split("\\s+");
+		String[] tokens = cmdLine.split("\\s+", 3);
 
 		if(tokens[0].equals("quit")) {	
 			stop = true;
