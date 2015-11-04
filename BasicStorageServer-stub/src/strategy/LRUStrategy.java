@@ -1,82 +1,30 @@
 package strategy;
 
+import java.util.LinkedList;
+import java.util.List;
+
 public class LRUStrategy extends Strategy {
 
-	private final int size;
-	private String[] keys;
-	
-	public LRUStrategy(int size){
-		this.size = size;
-		keys = new String[size];
-	}
+	private List<String> lists = new LinkedList<String>();
 	
 	@Override
 	public String get() {
-		for(int i = size; i > 0; i--)
-		{
-			if(keys[i-1] != null)
-			{
-				String ret = keys[i-1];
-				remove(ret);
-				return ret;
-			}
+		if(lists.size() != 0){
+			String target = lists.get(lists.size() - 1);
+			lists.remove(lists.size() - 1);
+			return target;
 		}
-		
 		return null;
 	}
 
 	@Override
 	public void add(String key) {
-		
-		String tmp;
-		int doesContain = contains(key);
-		
-		if(doesContain >= 0){
-			remove(key);
-			add(key);
+		if(lists.contains(key)){
+			lists.remove(key);
 		}
 		
-		else{
-			tmp = keys[0];
-			keys[0] = key;
-		
-			for(int i = 1; i < size - 1; i++)
-			{
-				keys[i] = tmp;
-				tmp = keys[i + 1];
-			}
-		}
+		lists.add(0, key);
 	}
 	
-	private int contains(String key)
-	{
-		int doesContain = -1;
-		
-		for(int i = 0; i < size; i++)
-		{
-			if(keys[i] == key){
-				doesContain = i;
-			}
-		}
-		
-		return doesContain;
-	}
-	
-	private void remove(String key)
-	{
-		boolean copyFromHere = false;
-		
-		for(int i = 0; i < size; i++)
-		{
-			if(keys[i] == key){
-				copyFromHere = true;
-			}
-			if(copyFromHere && (i < size - 1))
-			{
-				keys[i] = keys[i+1];
-			}
-		}
-		keys[size - 1] = null;
-	}
 
 }

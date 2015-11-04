@@ -19,7 +19,9 @@ public class FIFOStrategy extends Strategy {
 
 	@Override
 	public void add(String key) {
-		lists.add(key);
+		if(!lists.contains(key)){
+			lists.add(key);
+		}
 	}
 
 }

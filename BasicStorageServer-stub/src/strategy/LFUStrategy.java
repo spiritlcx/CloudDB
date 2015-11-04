@@ -1,40 +1,33 @@
 package strategy;
 
+import java.util.HashMap;
+
 public class LFUStrategy extends Strategy {
 
-	private final int size;
-	private String[] keys;
-	private int[] ratings;
+	private HashMap<String, Integer> keyrating;
 	
-	public LFUStrategy(int size){
-		this.size = size;
-		keys = new String[size];
-		ratings = new int[size];
-		
-		for(int i = 0; i < size; i++)
-		{
-			ratings[i] = -1;
-		}
+	public LFUStrategy(){
+		keyrating = new HashMap<String, Integer>();
 	}
 	
 	@Override
 	public String get() {
-		int lowestRating = 0;
-		int lowestRatingIndex = -1;
+		Integer lowestRating = Integer.MAX_VALUE;
+		String lowestKey = "";
 		
-		for(int i = 0; i < size; i++)
+		for(String key : keyrating.keySet())
 		{
-			if(ratings[i] > -1 && ratings[i] < lowestRating){
-				lowestRating = ratings[i];
-				lowestRatingIndex = i;
+			if(lowestRating > keyrating.get(key))
+			{
+				lowestRating = keyrating.get(key);
+				lowestKey = key;
 			}
 		}
 		
-		if(lowestRatingIndex > -1)
+		if(!lowestKey.equals(""))
 		{
-			String ret = keys[lowestRatingIndex];
-			remove(ret);
-			return ret;
+			keyrating.remove(lowestKey);
+			return lowestKey;
 		}
 		return null;
 	}
@@ -42,55 +35,14 @@ public class LFUStrategy extends Strategy {
 	@Override
 	public void add(String key) {
 		
-		int containedIndex = contains(key);
-		
-		if(containedIndex >= 0){
-			ratings[containedIndex]++;
+		if(keyrating.containsKey(key)){
+			Integer rating = keyrating.get(key) + 1;
+			keyrating.remove(key);
+			keyrating.put(key, rating);
 		}
-		
-		else{
-			for(int i = 1; i < size - 1; i++)
-			{
-				if(keys[i] == null && ratings[i] == -1)
-				{
-					keys[i] = key;
-					ratings[i] = 1;
-				}
-			}
-		}
-	}
-	
-	private int contains(String key)
-	{
-		int doesContain = -1;
-		
-		for(int i = 0; i < size; i++)
+		else
 		{
-			if(keys[i] == key){
-				doesContain = i;
-			}
+			keyrating.put(key, 1);
 		}
-		
-		return doesContain;
 	}
-	
-	private void remove(String key)
-	{
-		boolean copyFromHere = false;
-		
-		for(int i = 0; i < size; i++)
-		{
-			if(keys[i] == key){
-				copyFromHere = true;
-			}
-			if(copyFromHere && (i < size - 1))
-			{
-				keys[i] = keys[i+1];
-				ratings[i] = ratings[i+1];
-			}
-		}
-		keys[size - 1] = null;
-		ratings[size - 1] = -1;
-	}
-
 }

@@ -25,6 +25,7 @@ public class KVServer extends Thread{
     private ServerSocket serverSocket;
     private boolean running;
     private HashMap<String, String> keyvalue;
+    private Persistance persistance;
 	/**
 	 * Start KV Server at given port
 	 * @param port given port for storage server to operate
@@ -38,8 +39,9 @@ public class KVServer extends Thread{
 	public KVServer(int port, int cacheSize, String strategy) {
 		this.port = port;
 		this.cacheSize = cacheSize;
-		this.strategy = StrategyFactory.getStrategy(strategy, cacheSize);
+		this.strategy = StrategyFactory.getStrategy(strategy);
 		keyvalue = new HashMap<String, String>();
+		this.persistance = new Persistance();
 	}
     /**
      * Initializes and starts the server. 
@@ -54,7 +56,7 @@ public class KVServer extends Thread{
 	            try {
 	                Socket client = serverSocket.accept();                
 	                ClientConnection connection = 
-	                		new ClientConnection(client, keyvalue, cacheSize, strategy);
+	                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance);
 	               (new Thread(connection)).start();
 	                
 	                logger.info("Connected to " 

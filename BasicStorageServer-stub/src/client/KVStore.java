@@ -26,6 +26,9 @@ public class KVStore extends Thread implements KVCommInterface {
 	private Socket clientSocket;
 	private OutputStream output;
  	private InputStream input;
+ 	
+ 	private String address;
+ 	private int port;
 	
 	private static final int BUFFER_SIZE = 1024;
 	private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
@@ -38,19 +41,10 @@ public class KVStore extends Thread implements KVCommInterface {
 	 * @throws UnknownHostException 
 	 */
 	public KVStore(String address, int port){
-		try {
-			clientSocket = new Socket(address, port);
-			output = clientSocket.getOutputStream();
-			input = clientSocket.getInputStream();
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-			logger.error(e.getMessage());
-			return;
-		} catch (IOException e) {
-			e.printStackTrace();
-			logger.error(e.getMessage());
-			return;
-		}
+		
+		this.address = address;
+		this.port = port;
+		
 		listeners = new HashSet<ClientSocketListener>();
 		setRunning(true);
 		logger.info("Connection established");
@@ -105,20 +99,11 @@ public class KVStore extends Thread implements KVCommInterface {
 //		}
 //	}
 	
-	public synchronized void closeConnection() {
-		logger.info("Trying to close connection ...");
-		
-		try {
-			tearDownConnection();
-			for(ClientSocketListener listener : listeners) {
-				listener.handleStatus(SocketStatus.DISCONNECTED);
-			}
-		} catch (IOException ioe) {
-			logger.error("Unable to close connection!");
-		}
-	}
+//	public synchronized void closeConnection() {
+//		
+//	}
 	
-	private void tearDownConnection() throws IOException {
+	private synchronized void tearDownConnection() throws IOException {
 		setRunning(false);
 		logger.info("Tearing down the connection ...");
 		if (clientSocket != null) {
@@ -217,13 +202,34 @@ public class KVStore extends Thread implements KVCommInterface {
  	
 	@Override
 	public void connect() throws Exception {
-		// TODO Auto-generated method stub
+		try {
+			clientSocket = new Socket(address, port);
+			output = clientSocket.getOutputStream();
+			input = clientSocket.getInputStream();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+			logger.error(e.getMessage());
+			return;
+		} catch (IOException e) {
+			e.printStackTrace();
+			logger.error(e.getMessage());
+			return;
+		}
 	
 	}
 
 	@Override
 	public void disconnect() {
-		// TODO Auto-generated method stub
+		logger.info("Trying to close connection ...");
+		
+		try {
+			tearDownConnection();
+			for(ClientSocketListener listener : listeners) {
+				listener.handleStatus(SocketStatus.DISCONNECTED);
+			}
+		} catch (IOException ioe) {
+			logger.error("Unable to close connection!");
+		}
 	}
 
 	@Override

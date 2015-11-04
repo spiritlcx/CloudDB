@@ -131,25 +131,22 @@ public class KVClient implements ClientSocketListener{
 		}
 	}
 	
-	private void sendMessage(String msg){
-		try {
-			client.sendMessage(new TextMessage(msg));
-		} catch (IOException e) {
-			printError("Unable to send message!");
-			disconnect();
-		}
-	}
-
-	private void connect(String address, int port) 
+		private void connect(String address, int port) 
 			throws UnknownHostException, IOException {
 		client = new KVStore(address, port);
+		try{
+			client.connect();
+		}
+		catch(Exception e){
+			logger.error("Connection attempt failed.", e);
+		}
 		client.addListener(this);
 		client.start();
 	}
 	
 	private void disconnect() {
 		if(client != null) {
-			client.closeConnection();
+			client.disconnect();
 			client = null;
 		}
 	}
@@ -215,8 +212,8 @@ public class KVClient implements ClientSocketListener{
 	@Override
 	public void handleNewMessage(TextMessage msg) {
 		if(!stop) {
-			System.out.println(msg.getMsg());
 			System.out.print(PROMPT);
+			System.out.println(msg.getMsg());
 		}
 	}
 	

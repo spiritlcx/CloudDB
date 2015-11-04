@@ -89,7 +89,6 @@ public class TextMessage implements Serializable, KVMessage {
 
 	@Override
 	public String getKey() {
-		// TODO Auto-generated method stub
 		return key;
 	}
 	
@@ -99,7 +98,6 @@ public class TextMessage implements Serializable, KVMessage {
 
 	@Override
 	public String getValue() {
-		// TODO Auto-generated method stub
 		return value;
 	}
 	
@@ -109,7 +107,6 @@ public class TextMessage implements Serializable, KVMessage {
 
 	@Override
 	public StatusType getStatus() {
-		// TODO Auto-generated method stub
 		return statusType;
 	}
 	
@@ -151,7 +148,7 @@ public class TextMessage implements Serializable, KVMessage {
 			return null;
 		}
 		msg = msg.substring(1, msg.length()-1);
-		String [] pairs = msg.split(",");
+		String [] pairs = msg.split(",", 3);
 		for(String pair : pairs){
 			
 			String [] keyvalue= pair.split(":");

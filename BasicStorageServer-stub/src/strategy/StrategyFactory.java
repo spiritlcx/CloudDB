@@ -1,15 +1,15 @@
 package strategy;
 
 public class StrategyFactory {
-	public static Strategy getStrategy(String strategy, int size){
+	public static Strategy getStrategy(String strategy){
 		if(strategy.equals("FIFO")){
 			return new FIFOStrategy();
 		}
 		else if(strategy.equals("LRU")){
-			return new LRUStrategy(size);
+			return new LRUStrategy();
 		}
 		else if(strategy.equals("LFU")){
-			return new LFUStrategy(size);
+			return new LFUStrategy();
 		}
 
 		return null;
