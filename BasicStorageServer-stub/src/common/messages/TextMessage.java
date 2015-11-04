@@ -89,7 +89,6 @@ public class TextMessage implements Serializable, KVMessage {
 
 	@Override
 	public String getKey() {
-		// TODO Auto-generated method stub
 		return key;
 	}
 	
@@ -99,7 +98,6 @@ public class TextMessage implements Serializable, KVMessage {
 
 	@Override
 	public String getValue() {
-		// TODO Auto-generated method stub
 		return value;
 	}
 	
@@ -109,7 +107,6 @@ public class TextMessage implements Serializable, KVMessage {
 
 	@Override
 	public StatusType getStatus() {
-		// TODO Auto-generated method stub
 		return statusType;
 	}
 	
@@ -125,7 +122,7 @@ public class TextMessage implements Serializable, KVMessage {
 		case GET_ERROR:
 			return new TextMessage("{StatusType: GET_ERROR, key:" + key +"}");
 		case GET_SUCCESS:
-			return new TextMessage("{StatusType: SUCCESS, key:" + key + ", value:" + value +"}");
+			return new TextMessage("{StatusType: GET_SUCCESS, key:" + key + ", value:" + value +"}");
 		case PUT:
 			return new TextMessage("{StatusType: PUT, key:" + key + ", value:" + value +"}");
 		case PUT_SUCCESS:
@@ -138,8 +135,8 @@ public class TextMessage implements Serializable, KVMessage {
 			return new TextMessage("{StatusType: DELETE_SUCCESS, key:" + key +"}");
 		case DELETE_ERROR:
 			return new TextMessage("{StatusType: DELETE_ERROR, key:" + key +"}");
-			default:
-				return new TextMessage("{StatusType: FAILED}");
+		default:
+			return new TextMessage("{StatusType: FAILED}");
 		}
 	}
 
@@ -151,15 +148,24 @@ public class TextMessage implements Serializable, KVMessage {
 			return null;
 		}
 		msg = msg.substring(1, msg.length()-1);
-		String [] pairs = msg.split(",");
+		String [] pairs = msg.split(",", 3);
 		for(String pair : pairs){
+			
 			String [] keyvalue= pair.split(":");
+			
 			if(keyvalue[0].trim().equals("StatusType")){
 				demessage.setStatusType((StatusType.valueOf(keyvalue[1].trim().toUpperCase())));
-			}else if(keyvalue[0].trim().equals("key")){
+			}
+			else if(keyvalue[0].trim().equals("key")){
 				demessage.setKey(keyvalue[1].trim());
-			}else if(keyvalue[0].trim().equals("value")){
-				demessage.setValue(keyvalue[1].trim());
+			}
+			else if(keyvalue[0].trim().equals("value")){
+				if(keyvalue.length > 1){
+					demessage.setValue(keyvalue[1].trim());
+				}
+				else{
+					demessage.setValue("");
+				}
 			}
 		}
 		return demessage;

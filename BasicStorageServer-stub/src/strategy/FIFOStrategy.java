@@ -9,7 +9,6 @@ public class FIFOStrategy extends Strategy {
 	
 	@Override
 	public String get() {
-		// TODO Auto-generated method stub
 		if(lists.size() != 0){
 			String target = lists.get(0);
 			lists.remove(0);
@@ -20,8 +19,9 @@ public class FIFOStrategy extends Strategy {
 
 	@Override
 	public void add(String key) {
-		// TODO Auto-generated method stub
-		lists.add(key);
+		if(!lists.contains(key)){
+			lists.add(key);
+		}
 	}
 
 }

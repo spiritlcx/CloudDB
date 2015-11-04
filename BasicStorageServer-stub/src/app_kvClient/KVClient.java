@@ -48,7 +48,8 @@ public class KVClient implements ClientSocketListener{
 			disconnect();
 			System.out.println(PROMPT + "Application exit!");
 		
-		} else if (tokens[0].equals("connect")){
+		} 
+		else if (tokens[0].equals("connect")){
 			if(tokens.length == 3) {
 				try{
 					serverAddress = tokens[1];
@@ -68,22 +69,21 @@ public class KVClient implements ClientSocketListener{
 				printError("Invalid number of parameters!");
 			}
 			
-		} else  if (tokens[0].equals("put")) {
+		} 
+		else  if (tokens[0].equals("put")) {
 			if(tokens.length >= 2) {
 				if(client != null && client.isRunning()){
-					String [] keyvalue = cmdLine.split("put ");
-					String [] keyvaluepair = keyvalue[1].split(",");
-					if(keyvaluepair.length >= 2){
-						try {
-							client.put(keyvaluepair[0], keyvaluepair[1]);
-						} catch (Exception e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-							logger.error(e.getMessage());
-						}						
-					} else {
-						printError("Not key value pair");
-					}
+					try {
+						if(tokens.length == 2){
+							client.put(tokens[1], "");
+						}
+						else{
+							client.put(tokens[1], tokens[2]);
+						}
+					} catch (Exception e) {
+						printError("Error while sending put request to server!");
+						logger.error(e.getMessage());
+					}						
 					
 				} else {
 					printError("Not connected!");
@@ -131,25 +131,22 @@ public class KVClient implements ClientSocketListener{
 		}
 	}
 	
-	private void sendMessage(String msg){
-		try {
-			client.sendMessage(new TextMessage(msg));
-		} catch (IOException e) {
-			printError("Unable to send message!");
-			disconnect();
-		}
-	}
-
-	private void connect(String address, int port) 
+		private void connect(String address, int port) 
 			throws UnknownHostException, IOException {
 		client = new KVStore(address, port);
+		try{
+			client.connect();
+		}
+		catch(Exception e){
+			logger.error("Connection attempt failed.", e);
+		}
 		client.addListener(this);
 		client.start();
 	}
 	
 	private void disconnect() {
 		if(client != null) {
-			client.closeConnection();
+			client.disconnect();
 			client = null;
 		}
 	}
@@ -215,21 +212,20 @@ public class KVClient implements ClientSocketListener{
 	@Override
 	public void handleNewMessage(TextMessage msg) {
 		if(!stop) {
-			System.out.println(msg.getMsg());
 			System.out.print(PROMPT);
+			System.out.println(msg.getMsg());
 		}
 	}
 	
 	@Override
 	public void handleStatus(SocketStatus status) {
-		if(status == SocketStatus.CONNECTED) {
-
-		} else if (status == SocketStatus.DISCONNECTED) {
+		if (status == SocketStatus.DISCONNECTED) {
 			System.out.print(PROMPT);
 			System.out.println("Connection terminated: " 
 					+ serverAddress + " / " + serverPort);
 			
-		} else if (status == SocketStatus.CONNECTION_LOST) {
+		} 
+		else if (status == SocketStatus.CONNECTION_LOST) {
 			System.out.println("Connection lost: " 
 					+ serverAddress + " / " + serverPort);
 			System.out.print(PROMPT);

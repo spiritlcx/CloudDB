@@ -9,6 +9,9 @@ import java.util.HashMap;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import strategy.Strategy;
+import strategy.StrategyFactory;
+
 import logger.LogSetup;
 
 public class KVServer extends Thread{
@@ -18,10 +21,11 @@ public class KVServer extends Thread{
 	
 	private int port;
 	private int cacheSize;
-	private String strategy;
+	private Strategy strategy;
     private ServerSocket serverSocket;
     private boolean running;
     private HashMap<String, String> keyvalue;
+    private Persistance persistance;
 	/**
 	 * Start KV Server at given port
 	 * @param port given port for storage server to operate
@@ -35,8 +39,9 @@ public class KVServer extends Thread{
 	public KVServer(int port, int cacheSize, String strategy) {
 		this.port = port;
 		this.cacheSize = cacheSize;
-		this.strategy = strategy;
+		this.strategy = StrategyFactory.getStrategy(strategy);
 		keyvalue = new HashMap<String, String>();
+		this.persistance = new Persistance();
 	}
     /**
      * Initializes and starts the server. 
@@ -51,8 +56,8 @@ public class KVServer extends Thread{
 	            try {
 	                Socket client = serverSocket.accept();                
 	                ClientConnection connection = 
-	                		new ClientConnection(client, keyvalue, cacheSize, "FIFO");
-	                new Thread(connection).start();
+	                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance);
+	               (new Thread(connection)).start();
 	                
 	                logger.info("Connected to " 
 	                		+ client.getInetAddress().getHostName() 
@@ -109,20 +114,26 @@ public class KVServer extends Thread{
 			new LogSetup("logs/server.log", Level.ALL);
 			if(args.length != 3) {
 				System.out.println("Error! Invalid number of arguments!");
-				System.out.println("Usage: Server <port>!");
+				System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
 			} else {
 				int port = Integer.parseInt(args[0]);
 				int cacheSize = Integer.parseInt(args[1]);
 				String strategy =args[2];
-				new KVServer(port, cacheSize, strategy).start();
+				if(strategy.equals("FIFO") || strategy.equals("LRU") || strategy.equals("LFU")){
+					new KVServer(port, cacheSize, strategy).start();
+				}
+				else{
+					System.out.println("Error! Invalid argument <strategy>! Must be one of the following: FIFO | LFU | LRU!");
+					System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
+				}
 			}
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize logger!");
 			e.printStackTrace();
 			System.exit(1);
 		} catch (NumberFormatException nfe) {
-			System.out.println("Error! Invalid argument <port>! Not a number!");
-			System.out.println("Usage: Server <port>!");
+			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
+			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
 			System.exit(1);
 		}
     }
