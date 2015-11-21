@@ -1,5 +1,0 @@
-INDEX VERSION 1.127+/home/spiritlcx/lcx/github/CloudDB/.metadata/.plugins/org.eclipse.jdt.core
-2635448360.index
-3657203621.index
-2271581955.index
-2351865525.index
