@@ -17,7 +17,7 @@ public class TextMessage implements Serializable, KVMessage {
 	private String value;
 	private StatusType statusType;
 	/**
-	 * Constructs a TextMessage with no initial vlaues
+	 * Constructs a TextMessage with no initial values
 	 */
 	public TextMessage(){
 		
