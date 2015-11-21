@@ -4,7 +4,7 @@ import java.io.IOException;
 
 import org.apache.log4j.Level;
 
-import app_kvServer.KVServer;
+import app_KvServer.KVServer;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 import logger.LogSetup;
@@ -15,7 +15,7 @@ public class AllTests {
 	static {
 		try {
 			new LogSetup("logs/testing/test.log", Level.ERROR);
-			new KVServer(50000);
+			new KVServer(50000, 3, "FIFO");
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
