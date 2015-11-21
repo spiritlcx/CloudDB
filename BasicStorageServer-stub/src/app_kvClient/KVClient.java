@@ -40,8 +40,14 @@ public class KVClient implements ClientSocketListener{
 		}
 	}
 	
+	/**
+	 * The handleCommand methods handles all possible commands entered into the
+	 * command line. The put and get request is passed to the KVStore-Library, which
+	 * handles serialization and sending of the message.	
+	 * @param cmdLine The latest command line input
+	 */
 	private void handleCommand(String cmdLine) {
-		String[] tokens = cmdLine.split("\\s+");
+		String[] tokens = cmdLine.split("\\s+", 3);
 
 		if(tokens[0].equals("quit")) {	
 			stop = true;
@@ -98,8 +104,8 @@ public class KVClient implements ClientSocketListener{
 					try {
 						client.get(tokens[1]);
 					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						printError("Error while sending get request to server!");
+						logger.error(e.getMessage());
 					}
 				}
 			} else {
@@ -130,20 +136,28 @@ public class KVClient implements ClientSocketListener{
 			printHelp();
 		}
 	}
-	
-		private void connect(String address, int port) 
+	/**
+	 * Calls the connect method of KVStore
+	 * @param address IPV4 address of the server
+	 * @param port port that the server listens on
+	 * @throws UnknownHostException IP address not valid/reachable
+	 * @throws IOException 
+	 */
+	private void connect(String address, int port) 
 			throws UnknownHostException, IOException {
 		client = new KVStore(address, port);
 		try{
 			client.connect();
 		}
 		catch(Exception e){
-			logger.error("Connection attempt failed.", e);
+			logger.warn("Connection attempt failed.", e);
 		}
 		client.addListener(this);
 		client.start();
 	}
-	
+	/**
+	 * Calls the disconnect method of KVStore
+	 */
 	private void disconnect() {
 		if(client != null) {
 			client.disconnect();
@@ -208,7 +222,10 @@ public class KVClient implements ClientSocketListener{
 			return LogSetup.UNKNOWN_LEVEL;
 		}
 	}
-	
+	/**
+	 * Handles incoming messages on the client. Prints msg
+	 * after the PROMT String.
+	 */
 	@Override
 	public void handleNewMessage(TextMessage msg) {
 		if(!stop) {
@@ -217,6 +234,10 @@ public class KVClient implements ClientSocketListener{
 		}
 	}
 	
+	/**
+	 * Handles the socket status if it is disconnected or
+	 * connection lost. Informs the user about it.
+	 */
 	@Override
 	public void handleStatus(SocketStatus status) {
 		if (status == SocketStatus.DISCONNECTED) {

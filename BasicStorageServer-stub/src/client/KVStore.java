@@ -59,10 +59,47 @@ public class KVStore extends Thread implements KVCommInterface {
 			}
 			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			logger.warn("Error while receiving messages.", e);
 		}
 	}
+<<<<<<< HEAD
+=======
+//	public void run() {
+//		try {
+//			output = clientSocket.getOutputStream();
+//			input = clientSocket.getInputStream();
+//			
+//			while(isRunning()) {
+//				try {
+//					TextMessage latestMsg = receiveMessage();
+//					for(ClientSocketListener listener : listeners) {
+//						listener.handleNewMessage(latestMsg);
+//					}
+//				} catch (IOException ioe) {
+//					if(isRunning()) {
+//						logger.error("Connection lost!");
+//						try {
+//							tearDownConnection();
+//							for(ClientSocketListener listener : listeners) {
+//								listener.handleStatus(
+//										SocketStatus.CONNECTION_LOST);
+//							}
+//						} catch (IOException e) {
+//							logger.error("Unable to close connection!");
+//						}
+//					}
+//				}				
+//			}
+//		} catch (IOException ioe) {
+//			logger.error("Connection could not be established!");
+//			
+//		} finally {
+//			if(isRunning()) {
+//				closeConnection();
+//			}
+//		}
+//	}
+>>>>>>> bea75f2d0e95e8083e6a41fd119027882eefc5a0
 	
 	private synchronized void tearDownConnection() throws IOException {
 		setRunning(false);
@@ -100,7 +137,11 @@ public class KVStore extends Thread implements KVCommInterface {
 		logger.info("Send message:\t '" + msg.getMsg() + "'");
     }
 	
-	
+	/**
+	 * Receives message from the server and converts it to a TextMessage.
+	 * @return A TextMessage representing server response.
+	 * @throws IOException Some exception while reading the input stream occured
+	 */
 	private TextMessage receiveMessage() throws IOException {
 		
 		int index = 0;
@@ -160,7 +201,9 @@ public class KVStore extends Thread implements KVCommInterface {
 		logger.info("Receive message:\t '" + msg.getMsg() + "'");
 		return msg;
     }
- 	
+ 	/**
+ 	 * Opens the socket for connection to the server.
+ 	 */
 	@Override
 	public void connect() throws Exception {
 		try {
@@ -178,7 +221,10 @@ public class KVStore extends Thread implements KVCommInterface {
 		}
 	
 	}
-
+/**
+ * Disconnects the client from the server and sets the SocketStatus to
+ * DISCONNECTED.
+ */
 	@Override
 	public void disconnect() {
 		logger.info("Trying to close connection ...");
@@ -193,6 +239,10 @@ public class KVStore extends Thread implements KVCommInterface {
 		}
 	}
 
+	/**
+	 * Creates a TextMessage that is then filled with required values for the
+	 * put command and sends to the server.
+	 */
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
 		TextMessage sentMessage = new TextMessage();
@@ -212,6 +262,10 @@ public class KVStore extends Thread implements KVCommInterface {
 	
 	}
 
+	/**
+	 * Creates a TextMessage that is then filled with required values for the
+	 * get command and sends to the server.
+	 */
 	@Override
 	public KVMessage get(String key) throws Exception {
 		TextMessage sentMessage = new TextMessage();

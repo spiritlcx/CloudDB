@@ -8,7 +8,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
-
+import org.apache.log4j.*;
+/**
+ * Persistence class to handle the storage of data on the disk.
+ */
 public class Persistance {
 	private File file;
 	private BufferedReader reader;
@@ -17,13 +20,15 @@ public class Persistance {
 		try {
 			file = new File("persisteddata");
 			file.createNewFile();
-			
-
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Logger.getRootLogger().error("Persistance error.", e);
 		}
 	}
+	/**
+	 * Stores a key-value-pair in the storage file.
+	 * @param key The key to store
+	 * @param value The value to store
+	 */
 	public void store(String key, String value){
 		try {
 			writer = new BufferedWriter(new FileWriter(file, true));
@@ -36,11 +41,14 @@ public class Persistance {
 			writer.close();
 			writer = null;
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Logger.getRootLogger().error("Data storage error.", e);
 		}
 	}
-	
+	/**
+	 * Searches for a key in the storage file.
+	 * @param key The key to be looked for.
+	 * @return The value associated with this key.
+	 */
 	public String lookup(String key){
 		String keyvalue;
 		try {
@@ -58,13 +66,16 @@ public class Persistance {
 				reader.close();
 				reader = null;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Logger.getRootLogger().error("Data lookup error.", e);
 		} 
 
 		return null;
 	}
-	
+	/**
+	 * Removes a data record with a certain key from the storage file.
+	 * @param key The key to be looked for.
+	 * @return A String documenting the results.
+	 */
 	public String remove(String key){
 		String removeSuccess = "";
 		try {
@@ -98,23 +109,25 @@ public class Persistance {
 				}
 
 		    }
-		    catch (FileNotFoundException ex) {
-		      ex.printStackTrace();
+		    catch (FileNotFoundException e) {
+		    	Logger.getRootLogger().error("Data storage file not found.", e);
 		    }
-		    catch (IOException ex) {
-		      ex.printStackTrace();
+		    catch (IOException e) {
+		    	Logger.getRootLogger().error("Data storage error.", e);
 		    }
 		
 		return removeSuccess;
 	}
 	
+	/**
+	 * Closes reader and writer. Probably not necessary anymore.
+	 */
 	public void close(){
 		try {
 			reader.close();
 			writer.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Logger.getRootLogger().warn("Data storage error.", e);
 		}
 	}
 }

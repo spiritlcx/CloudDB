@@ -114,6 +114,12 @@ public class TextMessage implements Serializable, KVMessage {
 		this.statusType = type;
 	}
 
+	/**
+	 * Serializes the data of the current TextMessage into a String with format
+	 * {StatusType: <STATUS_TYPE>, key: <KEY>, value: <VALUE>}
+	 * and returns the result in a new TextMessage
+	 * @return Serialized String ready for sending to the server.
+	 */
 	public TextMessage serialize(){
 
 		switch(statusType){
@@ -140,7 +146,13 @@ public class TextMessage implements Serializable, KVMessage {
 		}
 	}
 
-//	{StatusType: PUT, key:name, value: spirit}
+	/**
+	 * Deserializes a String received from the server. The message
+	 * {StatusType: <STATUS_TYPE>, key: <KEY>, value: <VALUE>}
+	 * is split into its values and a new TextMessage with these
+	 * values is returned.
+	 * @return TextMessage with received Status, Key and Value
+	 */
 	public TextMessage deserialize(){
 		TextMessage demessage = new TextMessage();
 
