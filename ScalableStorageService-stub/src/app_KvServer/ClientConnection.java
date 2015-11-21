@@ -208,7 +208,7 @@ public class ClientConnection implements Runnable {
 				logger.error("No valid key value pair.");
 				return;
 			}
-			if(receivedMessage.getValue().equals("")){
+			if(receivedMessage.getValue().equals("null")){
 				if(keyvalue.get(receivedMessage.getKey()) != null){
 					sentMessage.setValue(keyvalue.get(receivedMessage.getKey()));
 					keyvalue.remove(receivedMessage.getKey());

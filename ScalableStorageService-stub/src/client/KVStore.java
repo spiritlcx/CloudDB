@@ -4,14 +4,14 @@ package client;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
+
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
+
 
 import common.messages.TextMessage;
 import client.ClientSocketListener.SocketStatus;
@@ -110,7 +110,10 @@ public class KVStore extends Thread implements KVCommInterface {
 		byte[] bufferBytes = new byte[BUFFER_SIZE];
 		
 		/* read first char from stream */
-		byte read = (byte) input.read();	
+		byte read = (byte) input.read();
+		if(read == -1)
+			return null;
+		
 		boolean reading = true;
 		
 		while(read != 13 && reading) {/* carriage return */
@@ -164,21 +167,23 @@ public class KVStore extends Thread implements KVCommInterface {
     }
  	/**
  	 * Opens the socket for connection to the server.
+ 	 * @throws IOException 
  	 */
 	@Override
-	public void connect() throws Exception {
+	public void connect() throws IOException, UnknownHostException {
 		try {
 			clientSocket = new Socket(address, port);
 			output = clientSocket.getOutputStream();
 			input = clientSocket.getInputStream();
+			
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			logger.error(e.getMessage());
-			return;
+			throw new UnknownHostException();
 		} catch (IOException e) {
 			e.printStackTrace();
 			logger.error(e.getMessage());
-			return;
+			throw new IOException();
 		}
 	
 	}
@@ -215,6 +220,11 @@ public class KVStore extends Thread implements KVCommInterface {
 
 		TextMessage receivedMessage = receiveMessage();
 
+		if(receivedMessage == null){
+			running = false;
+			return null;
+		}
+		
 		for(ClientSocketListener listener : listeners) {
 			listener.handleNewMessage(receivedMessage);
 		}
@@ -237,6 +247,11 @@ public class KVStore extends Thread implements KVCommInterface {
 		
 		TextMessage receivedMessage = receiveMessage();
 
+		if(receivedMessage == null){
+			running = false;
+			return null;
+		}
+		
 		for(ClientSocketListener listener : listeners) {
 			listener.handleNewMessage(receivedMessage);
 		}

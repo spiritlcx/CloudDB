@@ -3,6 +3,7 @@ package app_KvClient;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.ConnectException;
 import java.net.UnknownHostException;
 
 import org.apache.log4j.Level;
@@ -64,12 +65,6 @@ public class KVClient implements ClientSocketListener{
 				} catch(NumberFormatException nfe) {
 					printError("No valid address. Port must be a number!");
 					logger.info("Unable to parse argument <port>", nfe);
-				} catch (UnknownHostException e) {
-					printError("Unknown Host!");
-					logger.info("Unknown Host!", e);
-				} catch (IOException e) {
-					printError("Could not establish connection!");
-					logger.warn("Could not establish connection!", e);
 				}
 			} else {
 				printError("Invalid number of parameters!");
@@ -141,16 +136,16 @@ public class KVClient implements ClientSocketListener{
 	 * @param address IPV4 address of the server
 	 * @param port port that the server listens on
 	 * @throws UnknownHostException IP address not valid/reachable
-	 * @throws IOException 
+	 * @throws IOException
 	 */
-	private void connect(String address, int port) 
-			throws UnknownHostException, IOException {
+	private void connect(String address, int port) {
 		client = new KVStore(address, port);
-		try{
+		try {
 			client.connect();
-		}
-		catch(Exception e){
-			logger.warn("Connection attempt failed.", e);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return;
 		}
 		client.addListener(this);
 		client.start();

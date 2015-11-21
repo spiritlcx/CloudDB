@@ -27,7 +27,7 @@ public class InteractionTest extends TestCase {
 	
 	@Test
 	public void testPut() {
-		String key = "foobar";
+		String key = "foo";
 		String value = "bar";
 		KVMessage response = null;
 		Exception ex = null;
@@ -93,7 +93,10 @@ public class InteractionTest extends TestCase {
 		} catch (Exception e) {
 			ex = e;
 		}
-
+		System.out.println(ex);
+		System.out.println(response.getStatus());
+		System.out.println(response.getValue());
+		
 		assertTrue(ex == null && response.getStatus() == StatusType.DELETE_SUCCESS);
 	}
 	
