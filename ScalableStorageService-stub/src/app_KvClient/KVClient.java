@@ -148,7 +148,7 @@ public class KVClient implements ClientSocketListener{
 			return;
 		}
 		client.addListener(this);
-		client.start();
+		client.run();
 	}
 	/**
 	 * Calls the disconnect method of KVStore

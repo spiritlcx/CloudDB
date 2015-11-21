@@ -9,10 +9,9 @@ import java.util.HashMap;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import logger.LogSetup;
 import strategy.Strategy;
 import strategy.StrategyFactory;
-
-import logger.LogSetup;
 
 public class KVServer extends Thread{
 	
