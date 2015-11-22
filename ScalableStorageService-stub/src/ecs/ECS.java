@@ -5,22 +5,38 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.DigestException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Comparator;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-class Server{
-	public String ip;
-	public int port;
+import logger.LogSetup;
+import metadata.Metadata;
+
+class ServerHash implements Comparator<ServerHash>{
+	String ip;
+	String port;
+	String hashedkey;
+	@Override
+	public int compare(ServerHash o1, ServerHash o2) {
+		// TODO Auto-generated method stub
+		return o1.hashedkey.compareTo(o2.hashedkey);
+	}	
 }
 
-class Range{
-	public String from;
-	public String to;
-}
 
 public class ECS {
 	
-	Logger logger = Logger.getRootLogger();
+	private Logger logger = Logger.getRootLogger();
+	private Metadata metadata = new Metadata();
+	private static String start = "00000000000000000000000000000000";
+	private static String end = "ffffffffffffffffffffffffffffffff";
+
 	
 	/*Randomly choose <numberOfNodes> servers from the available 
 		machines and start the KVServer by issuing a SSH call to the 
@@ -36,9 +52,39 @@ public class ECS {
 			BufferedReader reader = new BufferedReader(new FileReader(file));
 			String line = null;
 			try {
-				while((line = reader.readLine()) != null){
-					
+				ConsistentHashing conHashing = new ConsistentHashing();
+				int currentnum = 0;
+				while(currentnum < numberOfNodes && (line = reader.readLine()) != null){
+					String [] node = line.split(" ");
+					if(node != null && node.length == 3){
+						ServerHash serverHash = new ServerHash();
+						serverHash.ip = node[1];
+						serverHash.port = node[2];
+						conHashing.add(serverHash);
+						currentnum++;
+					}
 				}
+
+				if(currentnum == 0)
+					return;
+				
+				ArrayList<ServerHash> servers = conHashing.distribute();
+
+				for(int i = 0; i < servers.size(); i++){
+					if(servers.size() == 1){
+						metadata.add(servers.get(i).ip, servers.get(i).port, start, end);
+						break;
+					}
+					if(i == 0)
+						metadata.add(servers.get(i).ip, servers.get(i).port,start, servers.get(i).hashedkey);
+					else if(i == servers.size() - 1)
+						metadata.add(servers.get(i).ip, servers.get(i).port, servers.get(i).hashedkey, end);
+					else
+						metadata.add(servers.get(i).ip, servers.get(i).port, servers.get(i).hashedkey, servers.get(i+1).hashedkey);
+				}
+				
+				System.out.println(metadata);
+
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				logger.error(e.getMessage());
@@ -46,6 +92,9 @@ public class ECS {
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			logger.error(e.getMessage());
+		} catch (NoSuchAlgorithmException e1) {
+			// TODO Auto-generated catch block
+			logger.error(e1.getMessage());
 		}
 	}
 	
@@ -84,6 +133,19 @@ public class ECS {
 	 */
 	public void removeNode(){
 		
+		
+	}
+	
+	public static void main(String [] args){
+		try {
+			new LogSetup("logs/ecs.log", Level.ALL);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		ECS ecs = new ECS();
+		ecs.initService(3, 3, "FIFO");
 		
 	}
 }

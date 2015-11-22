@@ -112,9 +112,9 @@ public class KVServer{
 		processed. 
      */
     
-    public void initKVServer(metadata, cacheSize, displacementStrategy){
-    	jj;
-    }
+//    public void initKVServer(metadata, cacheSize, displacementStrategy){
+//    	jj;
+//    }
 
     /**
      *Starts the KVServer, all client requests and all ECS requests are 
@@ -164,18 +164,18 @@ public class KVServer{
 		transfer is completed. 
      */
     
-    public void moveData(range, server){
-    	
-    	
-    }
-    
-    /**
-     * Update the meta­data repository of this server 
-     */
-    
-    public void update(metadata){
-    	
-    }
+//    public void moveData(range, server){
+//    	
+//    	
+//    }
+//    
+//    /**
+//     * Update the meta­data repository of this server 
+//     */
+//    
+//    public void update(metadata){
+//    	
+//    }
     
     
     /**
