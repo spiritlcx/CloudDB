@@ -13,7 +13,7 @@ import logger.LogSetup;
 import strategy.Strategy;
 import strategy.StrategyFactory;
 
-public class KVServer extends Thread{
+public class KVServer{
 	
 	
 	private static Logger logger = Logger.getRootLogger();
@@ -105,6 +105,80 @@ public class KVServer extends Thread{
     }
     
     /**
+     * Initialize the KVServer with the meta­data, it’s local cache size, 
+		and the cache displacement strategy, and block it for client 
+		requests, i.e., all client requests are rejected with an 
+		SERVER_STOPPED error message; ECS requests have to be 
+		processed. 
+     */
+    
+    public void initKVServer(metadata, cacheSize, displacementStrategy){
+    	jj;
+    }
+
+    /**
+     *Starts the KVServer, all client requests and all ECS requests are 
+	 *processed.  
+     */
+    
+    public void start(){
+    	
+    }
+
+    /**
+     * Stops the KVServer, all client requests are rejected and only 
+		ECS requests are processed.
+     */
+    
+    public void stop(){
+    	
+    }
+    
+    /**
+     * Exits the KVServer application. 
+     */
+    
+    public void shutDown(){
+    	
+    }
+
+    /**
+     *Lock the KVServer for write operations. 
+     */
+    public void lockWrite(){
+    	
+    }
+    
+    /**
+     * Unlock the KVServer for write operations. 
+     */
+    
+    public void unLockWrite(){
+    	
+    }
+    
+    /**
+     * Transfer a subset (range) of the KVServer’s data to another 
+		KVServer (reallocation before removing this server or adding a 
+		new KVServer to the ring); send a notification to the ECS, if data 
+		transfer is completed. 
+     */
+    
+    public void moveData(range, server){
+    	
+    	
+    }
+    
+    /**
+     * Update the meta­data repository of this server 
+     */
+    
+    public void update(metadata){
+    	
+    }
+    
+    
+    /**
      * Main entry point for the echo server application. 
      * @param args contains the port number at args[0].
      */
@@ -135,6 +209,5 @@ public class KVServer extends Thread{
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
 			System.exit(1);
 		}
-    }
-
+    }    
 }
