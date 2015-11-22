@@ -29,7 +29,6 @@ class ServerHash implements Comparator<ServerHash>{
 	}	
 }
 
-
 public class ECS {
 	
 	private Logger logger = Logger.getRootLogger();
@@ -70,6 +69,10 @@ public class ECS {
 				
 				ArrayList<ServerHash> servers = conHashing.distribute();
 
+				//After receiving servers with hashed keys, it will know how to map keys to
+				//each server with the range (from, to) in each server, and store the information
+				//in metadata which will be used by both client and server
+				
 				for(int i = 0; i < servers.size(); i++){
 					if(servers.size() == 1){
 						metadata.add(servers.get(i).ip, servers.get(i).port, start, end);

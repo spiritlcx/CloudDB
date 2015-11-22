@@ -2,8 +2,13 @@ package ecs;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+
+/**
+ * The class will take a few servers with ip and port
+ * with method distribute, it will calculate hash values for all servers, sorting and returning
+ * @author spiritlcx
+ *
+ */
 
 public class ConsistentHashing {
 	private ArrayList<ServerHash> servers = new ArrayList<ServerHash>();
