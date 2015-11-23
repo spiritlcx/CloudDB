@@ -2,8 +2,6 @@ package common.messages;
 
 import java.io.Serializable;
 
-import metadata.Metadata;
-
 /**
  * Represents a simple text message, which is intended to be received and sent 
  * by the server.
@@ -18,7 +16,6 @@ public class TextMessage implements Serializable, KVMessage {
 	private String key;
 	private String value;
 	private StatusType statusType;
-	private Metadata metadata;
 	/**
 	 * Constructs a TextMessage with no initial values
 	 */
@@ -144,12 +141,6 @@ public class TextMessage implements Serializable, KVMessage {
 			return new TextMessage("{StatusType: DELETE_SUCCESS, key:" + key +"}");
 		case DELETE_ERROR:
 			return new TextMessage("{StatusType: DELETE_ERROR, key:" + key +"}");
-		case SERVER_STOPPED:
-			return new TextMessage("{StatusType: SERVER_STOPPED, key:" + key + "}");
-		case SERVER_WRITE_LOCK:
-			return new TextMessage("{StatusType: SERVER_WRITE_LOCK, key:" + key +"}");
-	    case SERVER_NOT_RESPONSIBLE:
-			return new TextMessage("{StatusType: SERVER_NOT_RESPONSIBLE, key:" + key + ", metadata:" + metadata.toString() +"}");
 		default:
 			return new TextMessage("{StatusType: FAILED}");
 		}
@@ -188,37 +179,9 @@ public class TextMessage implements Serializable, KVMessage {
 					demessage.setValue("");
 				}
 			}
-			else if(keyvalue[0].trim().equals("metadata")){
-				Metadata tempdata = new Metadata();
-				
-				if(keyvalue.length > 1){
-					String[] datasets = keyvalue[1].split(",");
-					String[] serverset;
-					
-					for(String dataset: datasets){
-						serverset = dataset.substring(1, msg.length()-1).split(",");
-						
-						if(serverset.length == 4)
-						{
-							tempdata.add(serverset[0], serverset[1], serverset[2], serverset[3]);
-						}
-					}
-					
-					demessage.setMetadata(tempdata);
-				}
-				
-			}
 		}
 		return demessage;
 
-	}
-
-	public Metadata getMetadata() {
-		return metadata;
-	}
-
-	public void setMetadata(Metadata metadata) {
-		this.metadata = metadata;
 	}
 	
 }
