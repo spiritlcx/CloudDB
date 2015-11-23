@@ -45,7 +45,12 @@ public class KVAdminMessage {
 		case INIT:
 			return "{StatusType: " + type +", cacheSize: " + cacheSize + ", displacementStrategy: " +
 		displacementStrategy + ", metadata: " + metadata + "}";
+		
+		case MOVE:
+			return "";
 			
+		case UPDATE:
+			return "";
 			
 		default:
 			return null;

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 
 import org.apache.log4j.Level;
@@ -22,6 +23,7 @@ public class KVServer{
 	private int cacheSize;
 	private Strategy strategy;
     private ServerSocket serverSocket;
+    private Socket clientSocket;
     private boolean running;
     private HashMap<String, String> keyvalue;
     private Persistance persistance;
@@ -89,8 +91,22 @@ public class KVServer{
 
     private boolean initializeServer() {
     	logger.info("Initialize server ...");
+    	
+    	try {
+			clientSocket = new Socket("127.0.0.1", 40000);
+
+			System.out.println(clientSocket.getInputStream().read());
+		} catch (UnknownHostException e1) {
+			// TODO Auto-generated catch block
+			logger.error(e1.getMessage());
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			logger.error(e1.getMessage());
+		}
+    	
     	try {
             serverSocket = new ServerSocket(port);
+            System.out.println(serverSocket);
             logger.info("Server listening on port: " 
             		+ serverSocket.getLocalPort());    
             return true;
@@ -101,6 +117,9 @@ public class KVServer{
             	logger.error("Port " + port + " is already bound!");
             }
             return false;
+        } catch (Exception e){
+        	logger.error(e.getMessage());
+        	return false;
         }
     }
     
@@ -193,7 +212,7 @@ public class KVServer{
 				int cacheSize = Integer.parseInt(args[1]);
 				String strategy =args[2];
 				if(strategy.equals("FIFO") || strategy.equals("LRU") || strategy.equals("LFU")){
-					new KVServer(port, cacheSize, strategy).start();
+					new KVServer(port, cacheSize, strategy).run();
 				}
 				else{
 					System.out.println("Error! Invalid argument <strategy>! Must be one of the following: FIFO | LFU | LRU!");

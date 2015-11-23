@@ -5,16 +5,18 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.DigestException;
-import java.security.MessageDigest;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.TreeMap;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import common.messages.KVAdminMessage;
+import common.messages.KVAdminMessage.StatusType;
 import logger.LogSetup;
 import metadata.Metadata;
 
@@ -36,6 +38,10 @@ public class ECS {
 	private static String start = "00000000000000000000000000000000";
 	private static String end = "ffffffffffffffffffffffffffffffff";
 
+	private ServerSocket ecsServer;
+
+	private TreeMap<String, Socket> hashservers;
+	private ArrayList<ServerHash> servers;
 	
 	/*Randomly choose <numberOfNodes> servers from the available 
 		machines and start the KVServer by issuing a SSH call to the 
@@ -63,11 +69,12 @@ public class ECS {
 						currentnum++;
 					}
 				}
+				reader.close();
 
 				if(currentnum == 0)
 					return;
 				
-				ArrayList<ServerHash> servers = conHashing.distribute();
+				servers = conHashing.distribute();
 
 				//After receiving servers with hashed keys, it will know how to map keys to
 				//each server with the range (from, to) in each server, and store the information
@@ -148,7 +155,39 @@ public class ECS {
 		}
 
 		ECS ecs = new ECS();
-		ecs.initService(3, 3, "FIFO");
+		ecs.startEcs(40000, 3, 3, "FIFO");
 		
+	}
+	
+	public void startEcs(int port, int numberOfNodes, int cacheSize, String displacementStrategy){
+		try {
+			
+			initService(8, cacheSize, displacementStrategy);
+			
+			ecsServer = new ServerSocket(port);
+			Socket kvserver = null;
+			KVAdminMessage initMessage = new KVAdminMessage();
+			initMessage.setCacheSize(cacheSize);
+			initMessage.setDisplacementStrategy(displacementStrategy);
+			initMessage.setMetadata(metadata);
+			initMessage.setStatus(StatusType.INIT);
+			while( (kvserver = ecsServer.accept()) != null){
+				logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");
+
+				for(ServerHash server : servers){
+					if( kvserver.getPort() == Integer.parseInt(server.port) && 
+							kvserver.getInetAddress().equals(server.ip)){
+						hashservers.put(server.hashedkey, kvserver);
+
+						kvserver.getOutputStream().write((initMessage.serialize()).getBytes());
+						break;
+					}
+				}
+			}
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			logger.error(e.getMessage());
+		}
 	}
 }
