@@ -18,6 +18,8 @@ import client.ClientSocketListener.SocketStatus;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
 
+import metadata.Metadata;
+
 public class KVStore extends Thread implements KVCommInterface {	
 	private Logger logger = Logger.getRootLogger();
 	private Set<ClientSocketListener> listeners;
@@ -26,6 +28,8 @@ public class KVStore extends Thread implements KVCommInterface {
 	private Socket clientSocket;
 	private OutputStream output;
  	private InputStream input;
+ 	
+	private Metadata metadata;
  	
  	private String address;
  	private int port;
@@ -207,7 +211,9 @@ public class KVStore extends Thread implements KVCommInterface {
 
 	/**
 	 * Creates a TextMessage that is then filled with required values for the
-	 * put command and sends to the server.
+	 * put command and send to the responsible server.
+	 * If SERVER_NOT_RESPONSIBLE is received, update the metadata, reestablish the
+	 * connection with the correct server and retry the put operation.
 	 */
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
@@ -215,6 +221,19 @@ public class KVStore extends Thread implements KVCommInterface {
 		sentMessage.setStatusType(StatusType.PUT);
 		sentMessage.setKey(key);
 		sentMessage.setValue(value);
+		
+		if(metadata != null)
+		{
+			String[] correctServer = metadata.getServer(key);
+			
+			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port)))
+			{
+				disconnect();
+				this.address = correctServer[0];
+				this.port = Integer.parseInt(correctServer[1]);
+				connect();
+			}
+		}
 
 		sendMessage(sentMessage.serialize());
 
@@ -225,17 +244,35 @@ public class KVStore extends Thread implements KVCommInterface {
 			return null;
 		}
 		
-		for(ClientSocketListener listener : listeners) {
-			listener.handleNewMessage(receivedMessage);
+		if(receivedMessage.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)){
+			receivedMessage = receivedMessage.deserialize();
+			
+			if(receivedMessage.getMetadata() != null){
+				this.metadata = receivedMessage.getMetadata();
+				logger.warn("Metadata stale! Metadata was updated!");
+				reestablishConnection(key);
+				return put(key, value);
+			}
+			else{
+				logger.error("Metadata stale, but no metadata update was received!");
+				return new TextMessage("Error while contacting the server.");
+			}
 		}
+		else{
+			for(ClientSocketListener listener : listeners) {
+				listener.handleNewMessage(receivedMessage);
+			}
 
-		return (KVMessage)receivedMessage.deserialize();
+			return (KVMessage)receivedMessage.deserialize();
+		}
 	
 	}
 
 	/**
 	 * Creates a TextMessage that is then filled with required values for the
-	 * get command and sends to the server.
+	 * get command and send to the responsible server.
+	 * If SERVER_NOT_RESPONSIBLE is received, update the metadata, reestablish 
+	 * the connection with the correct server and retry the get operation.
 	 */
 	@Override
 	public KVMessage get(String key) throws Exception {
@@ -243,6 +280,19 @@ public class KVStore extends Thread implements KVCommInterface {
 		sentMessage.setStatusType(StatusType.GET);
 		sentMessage.setKey(key);
 		
+		if(metadata != null)
+		{
+			String[] correctServer = metadata.getServer(key);
+			
+			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port)))
+			{
+				disconnect();
+				this.address = correctServer[0];
+				this.port = Integer.parseInt(correctServer[1]);
+				connect();
+			}
+		}
+		
 		sendMessage(sentMessage.serialize());
 		
 		TextMessage receivedMessage = receiveMessage();
@@ -252,11 +302,46 @@ public class KVStore extends Thread implements KVCommInterface {
 			return null;
 		}
 		
-		for(ClientSocketListener listener : listeners) {
-			listener.handleNewMessage(receivedMessage);
+		if(receivedMessage.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)){
+			receivedMessage = receivedMessage.deserialize();
+			
+			if(receivedMessage.getMetadata() != null){
+				this.metadata = receivedMessage.getMetadata();
+				logger.warn("Metadata stale! Metadata was updated!");
+				reestablishConnection(key);
+				return get(key);
+			}
+			else{
+				logger.error("Metadata stale, but no metadata update was received!");
+				return new TextMessage("Error while contacting the server.");
+			}
 		}
+		else{
+			for(ClientSocketListener listener : listeners) {
+				listener.handleNewMessage(receivedMessage);
+			}
 
-		return (KVMessage)receivedMessage.deserialize();
+			return (KVMessage)receivedMessage.deserialize();
+		}
+	}
+	
+	/**
+	 * Looks up the correct server for the provided key in the
+	 * updated metadata and establishes a new connection to
+	 * this server after closing the old connection.
+	 * @param key			The key of the original get/put request 
+	 * @throws Exception	
+	 */
+	private void reestablishConnection(String key) throws Exception{
+		String[] correctserver = metadata.getServer(key);
+		
+		if(correctserver != null)
+		{
+			disconnect();
+			this.address = correctserver[0];
+			this.port = Integer.parseInt(correctserver[1]);
+			connect();
+		}
 	}
 	
 }
