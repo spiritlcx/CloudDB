@@ -7,14 +7,17 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import common.messages.KVAdminMessage;
-import common.messages.TextMessage;
 import common.messages.KVAdminMessage.StatusType;
+import common.messages.MessageHandler;
+import ecs.ConsistentHashing;
 import logger.LogSetup;
 import metadata.Metadata;
 import strategy.Strategy;
@@ -32,11 +35,13 @@ public class KVServer{
 	private int cacheSize;
 	private Strategy strategy;
     private ServerSocket serverSocket;
+    private ServerSocket serverMove;
     private Socket clientSocket;
 
     private InputStream input;
 	private OutputStream output;
-
+	private MessageHandler messageHandler;
+	
     private boolean running;
     private boolean shutdown;
     public static boolean lock;
@@ -84,7 +89,6 @@ public class KVServer{
 	        	if(running){
 		            try {
 		                Socket client = serverSocket.accept();  
-		                System.out.println(cacheSize);
 		                ClientConnection connection = 
 		                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance);
 		               (new Thread(connection)).start();
@@ -115,90 +119,16 @@ public class KVServer{
 		}
     }
 
-	public void sendMessage(KVAdminMessage msg) throws IOException {
-		String ms = msg.serialize();
-		byte[] msgBytes = ms.getBytes();
-		output.write(msgBytes, 0, msgBytes.length);
-		output.flush();
-		logger.info("SEND \t<" 
-				+ clientSocket.getInetAddress().getHostAddress() + ":" 
-				+ clientSocket.getPort() + ">: '" 
-				+ msg.serialize() +"'");
-    }
-
-
-	private String receiveMessage() throws IOException {
-		
-		int index = 0;
-		byte[] msgBytes = null, tmp = null;
-		byte[] bufferBytes = new byte[BUFFER_SIZE];
-		
-		/* read first char from stream */
-		byte read = (byte) input.read();
-
-		if(read == -1)
-			throw new IOException();
-		
-		boolean reading = true;
-		
-		while(read != 13 && reading) {/* carriage return */
-			/* if buffer filled, copy to msg array */
-			if(index == BUFFER_SIZE) {
-				if(msgBytes == null){
-					tmp = new byte[BUFFER_SIZE];
-					System.arraycopy(bufferBytes, 0, tmp, 0, BUFFER_SIZE);
-				} else {
-					tmp = new byte[msgBytes.length + BUFFER_SIZE];
-					System.arraycopy(msgBytes, 0, tmp, 0, msgBytes.length);
-					System.arraycopy(bufferBytes, 0, tmp, msgBytes.length,
-							BUFFER_SIZE);
-				}
-
-				msgBytes = tmp;
-				bufferBytes = new byte[BUFFER_SIZE];
-				index = 0;
-			} 
-			
-			/* only read valid characters, i.e. letters and constants */
-			bufferBytes[index] = read;
-			index++;
-			
-			/* stop reading is DROP_SIZE is reached */
-			if(msgBytes != null && msgBytes.length + index >= DROP_SIZE) {
-				reading = false;
-			}
-			
-			/* read next char from stream */
-			read = (byte) input.read();
-		}
-		
-		if(msgBytes == null){
-			tmp = new byte[index];
-			System.arraycopy(bufferBytes, 0, tmp, 0, index);
-		} else {
-			tmp = new byte[msgBytes.length + index];
-			System.arraycopy(msgBytes, 0, tmp, 0, msgBytes.length);
-			System.arraycopy(bufferBytes, 0, tmp, msgBytes.length, index);
-		}
-		
-		msgBytes = tmp;
-		
-		/* build final String */
-		return new String(msgBytes, "UTF-8");
-    }
 	
 	private void communicateECS(){
 		while(!shutdown){
 			try {
-//				String msg = receiveMessage();
-				byte [] b = new byte[512];
-				input.read(b);
-				String msg = new String(b, "UTF-8");
-				System.out.println(msg);
-				KVAdminMessage message = new KVAdminMessage();
-				message = message.deserialize(msg);
+				byte [] b =messageHandler.receiveMessage();
+				
+				KVAdminMessage message = new KVAdminMessage(b);
+				message = message.deserialize(new String(b, "UTF-8"));
 				if(message == null){
-					logger.error(msg + " is not complete data");
+					logger.error(message.getMsg() + " is not complete data");
 					continue;
 				}
 				switch(message.getStatusType()){
@@ -206,11 +136,97 @@ public class KVServer{
 					Metadata meta = message.getMetadata();
 					int cacheSize = message.getCacheSize();
 					String strategy = message.getDisplacementStrategy();
-					initKVServer(meta, cacheSize, strategy);					
+					initKVServer(meta, cacheSize, strategy);
 	                System.out.println(cacheSize);
 
 					break;
 				case MOVE:
+					
+					KVAdminMessage dataMessage = new KVAdminMessage();
+					dataMessage.setStatusType(StatusType.DATA);
+					ConsistentHashing conHashing;
+					try {
+						conHashing = new ConsistentHashing();
+					} catch (NoSuchAlgorithmException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						return;
+					}
+					
+					String from = message.getFrom();
+					String to = message.getTo();
+					String ip = message.getIp();
+
+					Socket moveSender = new Socket(ip, 30000);
+					
+					MessageHandler senderHandler = new MessageHandler(moveSender.getInputStream(), moveSender.getOutputStream(), logger);
+					
+					String data = "";
+
+					ArrayList<String> toRemove = new ArrayList<String>();
+					
+					synchronized(keyvalue){
+						for(String key : keyvalue.keySet()){
+							String hashedkey= conHashing.getHashedKey(key);
+							System.out.println(hashedkey);
+							
+							if(to.compareTo(from) < 0){
+								if(hashedkey.compareTo(from) > 0 || hashedkey.compareTo(to) < 0){
+									toRemove.add(key);
+									String value = keyvalue.get(key);
+										data += (key + " " + value);
+									data += ".";									
+								}
+								continue;
+							}
+							
+							if(hashedkey.compareTo(from) > 0 && hashedkey.compareTo(to) < 0){
+								toRemove.add(key);
+								String value = keyvalue.get(key);
+									data += (key + " " + value);
+								data += ".";
+							}
+						}
+					}
+
+					dataMessage.setData(data);
+
+					senderHandler.sendMessage(dataMessage.serialize().getMsg());
+					
+					for(String key: toRemove){
+						synchronized(keyvalue){
+							keyvalue.remove(key);
+						}
+					}
+					break;
+				case RECEIVE:
+					serverMove = new ServerSocket(30000);
+					Socket clientMove = serverMove.accept();
+					
+					
+					InputStream moveinput = clientMove.getInputStream();
+					MessageHandler receiverHandler = new MessageHandler(moveinput, null, logger);
+					byte [] datab = receiverHandler.receiveMessage();
+
+					String datamsg = new String(datab, "UTF-8");
+
+					System.out.println("ssss");
+					
+					String [] pairs = datamsg.split(".");
+					
+					for(String pair : pairs){
+						String[] kvpair = pair.split(" ");
+						if(kvpair.length == 2){
+							synchronized(keyvalue){
+								keyvalue.put(kvpair[0], kvpair[1]);
+							}
+						}
+					}
+					
+					serverMove.close();
+					clientMove.close();
+					moveinput.close();
+					
 					break;
 				case SHUTDOWN:
 					shutDown();
@@ -233,6 +249,7 @@ public class KVServer{
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				logger.error(e);
+				shutdown = true;
 				return;
 			}
 		}
@@ -245,14 +262,17 @@ public class KVServer{
 			clientSocket = new Socket("127.0.0.1", 40000);
 			output = clientSocket.getOutputStream();
 			input = clientSocket.getInputStream();
-									
-			port = 50000;
+
+			messageHandler = new MessageHandler(input, output, logger);
+			
+			port = 50003;
 
 			KVAdminMessage msg = new KVAdminMessage();
 			msg.setStatusType(StatusType.RECEIVED);			
 			msg.setPort(port);
 			
-			sendMessage(msg);
+			messageHandler.sendMessage(msg.serialize().getMsg());
+			
 			new Thread(){
 				public void run(){
 					communicateECS();

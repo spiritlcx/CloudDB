@@ -2,30 +2,37 @@ package metadata;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Random;
 
-class Server{
-	String ip;
-	String port;
-	String from;
-	String to;
-	
-	public Server(String ip, String port, String from, String to){
-		this.ip = ip;
-		this.port = port;
-		this.from = from;
-		this.to = to;
-	}
-	
-}
+import ecs.Server;
 
 public class Metadata {
-	private ArrayList<Server> servers = new ArrayList<Server>();
-	public void add(String ip, String port, String from, String to){
-		servers.add(new Server(ip, port, from, to));
+	private List<Server> servers = new LinkedList<Server>();
+	public void add(Server server){
+		servers.add(server);
 	}
 
+	public Server putServer(Server server){
+		if(server.hashedkey.compareTo(servers.get(0).from) > 0 || server.hashedkey.compareTo(servers.get(0).to) < 0){
+			servers.add(0, new Server(server.ip, server.port, servers.get(0).from, server.hashedkey));
+			servers.get(1).from = server.hashedkey;
+			
+			return servers.get(1);			
+		}
+		
+		for(int i = 1; i < servers.size(); i++){
+
+			if(servers.get(i).from.compareTo(server.hashedkey) < 0 && servers.get(i).to.compareTo(server.hashedkey) > 0){
+				servers.add(i, new Server(server.ip, server.port, servers.get(i).from, server.hashedkey));
+				servers.get(i+1).from = server.hashedkey;
+				return servers.get(i+1);
+			}
+		}
+		return null;
+	}
+	
 	/**
 	 * This method looks up the server responsible for the hash value 
 	 * of a provided key.

@@ -36,7 +36,7 @@ public class MessageHandler {
 		/* read first char from stream */
 		byte read = (byte) input.read();
 		if(read == -1)
-			return null;
+			throw new IOException();
 		
 		boolean reading = true;
 		
@@ -83,6 +83,8 @@ public class MessageHandler {
 		}
 		
 		msgBytes = tmp;
+
+		logger.info("Received message:\t '" + new String(msgBytes, "UTF-8") + "'");
 		
 		return msgBytes;
     }

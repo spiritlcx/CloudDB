@@ -11,21 +11,39 @@ import java.util.ArrayList;
  */
 
 public class ConsistentHashing {
-	private ArrayList<ServerHash> servers = new ArrayList<ServerHash>();
+	private ArrayList<Server> servers = new ArrayList<Server>();
 	private MessageDigest md;
 
 	public ConsistentHashing() throws NoSuchAlgorithmException{
 		md  = MessageDigest.getInstance("MD5");
 	}
 	
-	public void add(ServerHash server){
+	public void add(Server server){
 		servers.add(server);
 	}
 	
-	public ArrayList<ServerHash> distribute(){
-		ArrayList<ServerHash> hashedservers = new ArrayList<ServerHash>();
+	public String getHashedKey(String ip, int port){
+		return getHashedKey(ip+port);
+	}
 
-		for(ServerHash server : servers){
+	public String getHashedKey(String key){
+		md.reset();
+		md.update((key).getBytes());
+		byte[] result = md.digest();
+		String hashedkey = "";
+		for(int i = 0; i < 16; i++){
+			int n = result[i] >> 4 & 0x0F;
+		 	hashedkey += String.format("%1s", Integer.toHexString(n));
+		 	n = result[i] & 0xF;
+		 	hashedkey += String.format("%1s", Integer.toHexString(n));
+		 }
+		return hashedkey;		
+	}
+	
+	public ArrayList<Server> distribute(){
+		ArrayList<Server> hashedservers = new ArrayList<Server>();
+
+		for(Server server : servers){
 			md.reset();
 			md.update((server.ip + server.port).getBytes());
 			byte[] result = md.digest();
@@ -40,7 +58,7 @@ public class ConsistentHashing {
 			hashedservers.add(server);
 		}
 
-		hashedservers.sort(new ServerHash());
+		hashedservers.sort(new Server());
 		return hashedservers;
 	}
 }
