@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" output="bin" path="src"/>
+	<classpathentry kind="var" path="JRE_LIB" rootpath="JRE_SRCROOT" sourcepath="JRE_SRC"/>
+	<classpathentry kind="con" path="/home/spiritlcx/lcx/github/CloudDB/ScalableStorageService-stub/bin"/>
+	<classpathentry kind="lib" path="/home/spiritlcx/lcx/github/CloudDB/ScalableStorageService-stub/libs/junit-4.10.jar"/>
+	<classpathentry kind="lib" path="/home/spiritlcx/lcx/github/CloudDB/ScalableStorageService-stub/libs/log4j-1.2.17.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

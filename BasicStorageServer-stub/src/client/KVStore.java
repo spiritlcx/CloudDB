@@ -62,42 +62,6 @@ public class KVStore extends Thread implements KVCommInterface {
 			logger.warn("Error while receiving messages.", e);
 		}
 	}
-//	public void run() {
-//		try {
-//			output = clientSocket.getOutputStream();
-//			input = clientSocket.getInputStream();
-//			
-//			while(isRunning()) {
-//				try {
-//					TextMessage latestMsg = receiveMessage();
-//					for(ClientSocketListener listener : listeners) {
-//						listener.handleNewMessage(latestMsg);
-//					}
-//				} catch (IOException ioe) {
-//					if(isRunning()) {
-//						logger.error("Connection lost!");
-//						try {
-//							tearDownConnection();
-//							for(ClientSocketListener listener : listeners) {
-//								listener.handleStatus(
-//										SocketStatus.CONNECTION_LOST);
-//							}
-//						} catch (IOException e) {
-//							logger.error("Unable to close connection!");
-//						}
-//					}
-//				}				
-//			}
-//		} catch (IOException ioe) {
-//			logger.error("Connection could not be established!");
-//			
-//		} finally {
-//			if(isRunning()) {
-//				closeConnection();
-//			}
-//		}
-//	}
-	
 	private synchronized void tearDownConnection() throws IOException {
 		setRunning(false);
 		logger.info("Tearing down the connection ...");
@@ -254,7 +218,8 @@ public class KVStore extends Thread implements KVCommInterface {
 		for(ClientSocketListener listener : listeners) {
 			listener.handleNewMessage(receivedMessage);
 		}
-		return receivedMessage;
+
+		return (KVMessage)receivedMessage.deserialize();
 	
 	}
 
@@ -275,7 +240,8 @@ public class KVStore extends Thread implements KVCommInterface {
 		for(ClientSocketListener listener : listeners) {
 			listener.handleNewMessage(receivedMessage);
 		}
-		return receivedMessage;
+
+		return (KVMessage)receivedMessage.deserialize();
 	}
 	
 }

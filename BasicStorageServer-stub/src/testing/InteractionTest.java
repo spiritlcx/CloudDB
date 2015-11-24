@@ -127,8 +127,5 @@ public class InteractionTest extends TestCase {
 		}
 
 		assertTrue(ex == null && response.getStatus() == StatusType.GET_ERROR);
-	}
-	
-
-
+	}	
 }
