@@ -15,7 +15,7 @@ public class AllTests {
 	static {
 		try {
 			new LogSetup("logs/testing/test.log", Level.ERROR);
-			new KVServer(50000, 3, "FIFO");
+			new KVServer();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

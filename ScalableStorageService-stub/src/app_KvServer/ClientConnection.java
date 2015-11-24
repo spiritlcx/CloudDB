@@ -69,11 +69,9 @@ public class ClientConnection implements Runnable {
 					+ clientSocket.getLocalAddress() + " / "
 					+ clientSocket.getLocalPort()));
 			
-			while(isOpen) {
+			while(isOpen && !KVServer.lock) {
 				try {
 					TextMessage latestMsg = receiveMessage();
-					if(latestMsg == null)
-						break;
 
 					TextMessage receivedMessage = latestMsg.deserialize();
 
@@ -137,7 +135,7 @@ public class ClientConnection implements Runnable {
 		byte read = (byte) input.read();
 
 		if(read == -1)
-			return null;
+			throw new IOException();
 		
 		boolean reading = true;
 		
@@ -211,7 +209,24 @@ public class ClientConnection implements Runnable {
 			if(receivedMessage.getValue().equals("null")){
 				if(keyvalue.get(receivedMessage.getKey()) != null){
 					sentMessage.setValue(keyvalue.get(receivedMessage.getKey()));
-					keyvalue.remove(receivedMessage.getKey());
+					synchronized(keyvalue){
+						keyvalue.remove(receivedMessage.getKey());
+					}
+					synchronized(strategy){
+						strategy.remove(receivedMessage.getKey());
+					}
+					String keyToLoad = null;
+					if((keyToLoad = persistance.read()) != null){
+						String valueToLoad = persistance.lookup(keyToLoad);
+						synchronized(keyvalue){
+							keyvalue.put(keyToLoad, valueToLoad);
+						}
+						persistance.remove(keyToLoad);
+						synchronized(strategy){
+							strategy.add(keyToLoad);
+						}
+					}
+					
 					sentMessage.setStatusType(StatusType.DELETE_SUCCESS);
 				} 
 				else if(persistance.lookup(receivedMessage.getKey()) != null){
@@ -238,35 +253,63 @@ public class ClientConnection implements Runnable {
 				return;
 			}
 		 	else{
-				if(keyvalue.size() == cacheSize){
-					String key = strategy.get();
-					String value = keyvalue.get(key);
-					persistance.store(key, value);
-					keyvalue.remove(key);
-				}
 				
 				if(keyvalue.get(receivedMessage.getKey()) != null){
-					keyvalue.remove(receivedMessage.getKey());
-					sentMessage.setStatusType(StatusType.PUT_UPDATE);
-				}
-				else if(persistance.lookup(receivedMessage.getKey()) != null){
-					String removeMessage = persistance.remove(receivedMessage.getKey());
-					logger.info(removeMessage);
-					if(removeMessage.contains("succesfully")){
-						sentMessage.setStatusType(StatusType.PUT_UPDATE);
+					synchronized(keyvalue){
+						keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
 					}
-					else{
-			    		sentMessage.setStatusType(StatusType.PUT_ERROR);
-			    	}
+					synchronized(strategy){
+						strategy.update(receivedMessage.getKey());
+					}
+					sentMessage.setStatusType(StatusType.PUT_UPDATE);
+				}else{
+					if(persistance.lookup(receivedMessage.getKey()) != null){
+						String removeMessage = persistance.remove(receivedMessage.getKey());
+						logger.info(removeMessage);
+						
+						//remove a key in keyvalue and put the new key						
+						if(removeMessage.contains("succesfully")){
+							String key = strategy.get();
+							String value = keyvalue.get(key);
+							persistance.store(key, value);
+							synchronized(strategy){
+								strategy.remove(key);
+							}
+							keyvalue.remove(key);
+
+							keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
+							sentMessage.setStatusType(StatusType.PUT_UPDATE);
+
+						}
+						else{
+				    		sentMessage.setStatusType(StatusType.PUT_ERROR);
+				    	}
+					}else{
+						if(keyvalue.size() == cacheSize){
+							String key = strategy.get();
+							String value = keyvalue.get(key);
+							persistance.store(key, value);
+							synchronized(keyvalue){
+								keyvalue.remove(key);
+								keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
+							}
+							synchronized(strategy){
+								strategy.remove(key);
+								strategy.add(receivedMessage.getKey());
+							}
+						}else{
+							synchronized(keyvalue){
+								keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
+							}
+							synchronized(strategy){
+								strategy.add(receivedMessage.getKey());
+							}
+
+						}
+						sentMessage.setStatusType(StatusType.PUT_SUCCESS);
+					}
 				}
-				else{
-			    	sentMessage.setStatusType(StatusType.PUT_SUCCESS);
-			    }
 		 	
-				if(sentMessage.getStatus() != StatusType.PUT_ERROR){
-			    	keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
-			    	strategy.add(receivedMessage.getKey());
-			    }
 			    sentMessage.setKey(receivedMessage.getKey());
 			    sentMessage.setValue(receivedMessage.getValue());
 			    try {
@@ -290,8 +333,17 @@ public class ClientConnection implements Runnable {
 				value = persistance.lookup(receivedMessage.getKey());
 				if(value != null){
 					persistance.remove(receivedMessage.getKey());
-					keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
-					strategy.add(receivedMessage.getKey());
+					String keyToRemove = strategy.get();
+					String valueToRemove = keyvalue.get(keyToRemove);
+					persistance.store(keyToRemove, valueToRemove);
+					synchronized(keyvalue){
+						keyvalue.remove(keyToRemove);
+						keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
+					}
+					synchronized(strategy){
+						strategy.remove(keyToRemove);
+						strategy.add(receivedMessage.getKey());
+					}
 				}
 			}
 			if(value != null){

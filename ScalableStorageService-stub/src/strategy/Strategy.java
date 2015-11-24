@@ -3,7 +3,9 @@ package strategy;
 /**
  * Abstract class Strategy allows for any of the 3 actual strategies to be used.
  */
-public abstract class Strategy {
-	abstract public String get();
-	abstract public void add(String key);
+public interface Strategy {
+	public String get();
+	public void add(String key);
+	public void remove(String key);
+	public void update(String key);
 }

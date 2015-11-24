@@ -16,6 +16,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import common.messages.KVAdminMessage;
+import common.messages.TextMessage;
 import common.messages.KVAdminMessage.StatusType;
 import logger.LogSetup;
 import metadata.Metadata;
@@ -40,7 +41,7 @@ public class ECS {
 
 	private ServerSocket ecsServer;
 
-	private TreeMap<String, Socket> hashservers;
+	private TreeMap<String, Socket> hashservers = new TreeMap<String, Socket>();
 	private ArrayList<ServerHash> servers;
 	
 	/*Randomly choose <numberOfNodes> servers from the available 
@@ -148,21 +149,27 @@ public class ECS {
 	
 	public static void main(String [] args){
 		try {
+			char b = 125;
+			System.out.println(b);
+			
 			new LogSetup("logs/ecs.log", Level.ALL);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-		ECS ecs = new ECS();
-		ecs.startEcs(40000, 3, 3, "FIFO");
-		
+		final ECS ecs = new ECS();
+		new Thread(){
+			public void run(){
+				ecs.startEcs(40000, 3, 3, "FIFO");
+			}
+		}.start();
 	}
-	
+
 	public void startEcs(int port, int numberOfNodes, int cacheSize, String displacementStrategy){
 		try {
 			
-			initService(8, cacheSize, displacementStrategy);
+			initService(numberOfNodes, cacheSize, displacementStrategy);
 			
 			ecsServer = new ServerSocket(port);
 			Socket kvserver = null;
@@ -170,16 +177,31 @@ public class ECS {
 			initMessage.setCacheSize(cacheSize);
 			initMessage.setDisplacementStrategy(displacementStrategy);
 			initMessage.setMetadata(metadata);
-			initMessage.setStatus(StatusType.INIT);
+			initMessage.setStatusType(StatusType.INIT);
 			while( (kvserver = ecsServer.accept()) != null){
 				logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");
 
+				byte [] b = new byte[64];
+				KVAdminMessage msg = new KVAdminMessage();
+				kvserver.getInputStream().read(b);
+				msg = msg.deserialize(new String(b, "UTF-8"));
+				int receivedport = msg.getPort();
+
+				
 				for(ServerHash server : servers){
-					if( kvserver.getPort() == Integer.parseInt(server.port) && 
-							kvserver.getInetAddress().equals(server.ip)){
+					
+					if( receivedport == Integer.parseInt(server.port) && 
+							kvserver.getInetAddress().toString().equals("/" + server.ip)){
 						hashservers.put(server.hashedkey, kvserver);
 
 						kvserver.getOutputStream().write((initMessage.serialize()).getBytes());
+						kvserver.getOutputStream().flush();
+						
+						KVAdminMessage m = new KVAdminMessage();
+						m.setStatusType(StatusType.START);
+						kvserver.getOutputStream().write(m.serialize().getBytes());
+						kvserver.getOutputStream().flush();						
+						
 						break;
 					}
 				}
