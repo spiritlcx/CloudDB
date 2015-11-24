@@ -1,6 +1,7 @@
 package common.messages;
 
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 
 import metadata.Metadata;
 
@@ -47,6 +48,12 @@ public class TextMessage implements Serializable, KVMessage {
 	public TextMessage(String msg) {
 		this.msg = msg.trim();
 		this.msgBytes = toByteArray(this.msg);
+		try {
+			this.msg = new String(msgBytes, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 
@@ -163,7 +170,7 @@ public class TextMessage implements Serializable, KVMessage {
 	 * @return TextMessage with received Status, Key and Value
 	 */
 	public TextMessage deserialize(){
-		TextMessage demessage = new TextMessage();
+		TextMessage demessage = new TextMessage(msgBytes);
 
 		if(msg.charAt(0) != '{' || msg.charAt(msg.length()-1) != '}'){
 			return null;

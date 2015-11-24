@@ -190,10 +190,10 @@ public class KVServer{
 	private void communicateECS(){
 		while(!shutdown){
 			try {
-				String msg = receiveMessage();
-//				byte [] b = new byte[512];
-//				input.read(b);
-//				String msg = new String(b, "UTF-8");
+//				String msg = receiveMessage();
+				byte [] b = new byte[512];
+				input.read(b);
+				String msg = new String(b, "UTF-8");
 				System.out.println(msg);
 				KVAdminMessage message = new KVAdminMessage();
 				message = message.deserialize(msg);

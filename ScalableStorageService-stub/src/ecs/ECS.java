@@ -16,7 +16,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import common.messages.KVAdminMessage;
-import common.messages.TextMessage;
 import common.messages.KVAdminMessage.StatusType;
 import logger.LogSetup;
 import metadata.Metadata;
@@ -149,8 +148,6 @@ public class ECS {
 	
 	public static void main(String [] args){
 		try {
-			char b = 125;
-			System.out.println(b);
 			
 			new LogSetup("logs/ecs.log", Level.ALL);
 		} catch (IOException e) {

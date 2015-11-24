@@ -338,7 +338,7 @@ public class ClientConnection implements Runnable {
 					persistance.store(keyToRemove, valueToRemove);
 					synchronized(keyvalue){
 						keyvalue.remove(keyToRemove);
-						keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
+						keyvalue.put(receivedMessage.getKey(), value);
 					}
 					synchronized(strategy){
 						strategy.remove(keyToRemove);
