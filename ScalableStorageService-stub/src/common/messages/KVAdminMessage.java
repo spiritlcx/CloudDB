@@ -15,6 +15,7 @@ public class KVAdminMessage extends Message{
 		SHUTDOWN,
 		MOVE, // successor will move data to processor
 		RECEIVE, // processor will prepare to receive data
+		MOVEFINISH,
 		DATA,
 		UPDATE
 	}
@@ -61,6 +62,7 @@ public class KVAdminMessage extends Message{
 		case SHUTDOWN:
 		case WRITELOCK:
 		case RECEIVE:
+		case MOVEFINISH:
 			return new KVAdminMessage("{StatusType: " + type +"}");
 		case RECEIVED:
 			return new KVAdminMessage("{StatusType: " + type + ", port: " + port + "}");
@@ -74,7 +76,7 @@ public class KVAdminMessage extends Message{
 			return new KVAdminMessage("{StatusType: " + type + ", from: " + from + ", to: " + to + ", ip: " + ip + "}");
 			
 		case UPDATE:
-			return new KVAdminMessage("");
+			return new KVAdminMessage("{StatusType: " + type + ", metadata: " + metadata + "}");
 			
 		default:
 			return null;

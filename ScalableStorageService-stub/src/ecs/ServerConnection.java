@@ -149,4 +149,26 @@ public class ServerConnection extends Thread{
 			e.printStackTrace();
 		}
 	}
+	
+	public void update(Metadata metadata){
+		KVAdminMessage metadataMessage = new KVAdminMessage();
+		metadataMessage.setStatusType(StatusType.UPDATE);
+		metadataMessage.setMetadata(metadata);
+		try {
+			messageHandler.sendMessage(metadataMessage.serialize().getMsg());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public byte [] getInput(){
+		try {
+			return messageHandler.receiveMessage();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+	}
 }

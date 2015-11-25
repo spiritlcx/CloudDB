@@ -15,17 +15,47 @@ public class Metadata {
 	}
 
 	public Server putServer(Server server){
+		if(servers.size() == 1){
+			if(server.hashedkey.compareTo(servers.get(0).hashedkey) < 0){
+				server.from = servers.get(0).hashedkey;
+				servers.get(0).from = server.to;
+				servers.get(0).to = servers.get(0).hashedkey;
+				server.to = server.hashedkey;
+
+				servers.add(0, server);
+				return servers.get(1);
+
+			}else{
+				servers.get(0).from = server.hashedkey;
+				server.from = servers.get(0).to;
+				servers.get(0).to = servers.get(0).hashedkey;
+				server.to = server.hashedkey;
+
+				servers.add(1, server);
+				return servers.get(0);
+			}
+		}
 		if(server.hashedkey.compareTo(servers.get(0).from) > 0 || server.hashedkey.compareTo(servers.get(0).to) < 0){
-			servers.add(0, new Server(server.ip, server.port, servers.get(0).from, server.hashedkey));
+			server.from = servers.get(0).from;
+			server.to = server.hashedkey;
+
+			servers.add(0, server);
+			server.from = servers.get(1).from;
+			server.to = server.hashedkey;
 			servers.get(1).from = server.hashedkey;
 			
 			return servers.get(1);			
 		}
 		
 		for(int i = 1; i < servers.size(); i++){
-
 			if(servers.get(i).from.compareTo(server.hashedkey) < 0 && servers.get(i).to.compareTo(server.hashedkey) > 0){
-				servers.add(i, new Server(server.ip, server.port, servers.get(i).from, server.hashedkey));
+				server.from = servers.get(i).from;
+				server.to = server.hashedkey;
+
+				servers.add(i, server);
+				server.from = servers.get(i+1).from;
+				server.to = server.hashedkey;
+
 				servers.get(i+1).from = server.hashedkey;
 				return servers.get(i+1);
 			}

@@ -17,6 +17,7 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import common.messages.KVAdminMessage;
+import common.messages.KVAdminMessage.StatusType;
 import logger.LogSetup;
 import metadata.Metadata;
 
@@ -111,9 +112,12 @@ public class ECS {
 					}
 					metadata.add(workingservers.get(i));
 				}
-				
-				System.out.println(metadata);
 
+				for(Server server : workingservers){
+					System.out.println(server.port);
+					System.out.println(server.from + " to " + server.to);
+				}
+				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				logger.error(e.getMessage());
@@ -194,8 +198,16 @@ public class ECS {
 			ServerConnection suserver = hashthreads.get(successor.hashedkey);
 			
 			suserver.setWriteLock();
-			suserver.moveData(successor.from, newworkingserver.hashedkey, newworkingserver.ip);
-						
+			suserver.moveData(newworkingserver.from, newworkingserver.to, newworkingserver.ip);
+									
+			KVAdminMessage moveFinished = new KVAdminMessage(suserver.getInput());
+			moveFinished = moveFinished.deserialize(moveFinished.getMsg());
+			if(moveFinished.getStatusType() == StatusType.MOVEFINISH){
+				for(ServerConnection connection : hashthreads.values()){
+					connection.update(metadata);
+				}
+			}
+
 			suserver.releaseWriteLock();
 		}
 	}
@@ -219,7 +231,7 @@ public class ECS {
 		final ECS ecs = new ECS();
 		new Thread(){
 			public void run(){
-				ecs.startEcs(40000, 1, 3, "FIFO");
+				ecs.startEcs(40000, 2, 10, "FIFO");
 			}
 		}.start();
 	}
@@ -232,7 +244,8 @@ public class ECS {
 			ecsServer = new ServerSocket(port);
 			Socket kvserver = null;
 
-			while( (kvserver = ecsServer.accept()) != null){
+			int currentNode = 0;
+			while(currentNode != numberOfNodes && (kvserver = ecsServer.accept()) != null){
 				logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");
 
 				byte [] b = new byte[64];
@@ -251,12 +264,15 @@ public class ECS {
 						ServerConnection connection = new ServerConnection (this, kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
 						hashthreads.put(server.hashedkey, connection);
 						connection.start();
+						currentNode++;
+
 						break;
 					}
 				}
-				addNode(3, "FIFO");
-
 			}
+			addNode(3, "FIFO");
+
+			while(true);
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

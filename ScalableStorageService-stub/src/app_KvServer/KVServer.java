@@ -88,6 +88,8 @@ public class KVServer{
 	        while(!shutdown){
 	        	if(running){
 		            try {
+		            	System.out.println("running");
+
 		                Socket client = serverSocket.accept();  
 		                ClientConnection connection = 
 		                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance);
@@ -131,102 +133,27 @@ public class KVServer{
 					logger.error(message.getMsg() + " is not complete data");
 					continue;
 				}
+
+				ArrayList<String> toRemove = null;
+
 				switch(message.getStatusType()){
 				case INIT:
 					Metadata meta = message.getMetadata();
-					int cacheSize = message.getCacheSize();
-					String strategy = message.getDisplacementStrategy();
-					initKVServer(meta, cacheSize, strategy);
-	                System.out.println(cacheSize);
+					int size = message.getCacheSize();
+					String stra = message.getDisplacementStrategy();
+					initKVServer(meta, size, stra);
 
 					break;
 				case MOVE:
-					
-					KVAdminMessage dataMessage = new KVAdminMessage();
-					dataMessage.setStatusType(StatusType.DATA);
-					ConsistentHashing conHashing;
-					try {
-						conHashing = new ConsistentHashing();
-					} catch (NoSuchAlgorithmException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-						return;
-					}
-					
+
 					String from = message.getFrom();
 					String to = message.getTo();
 					String ip = message.getIp();
-
-					Socket moveSender = new Socket(ip, 30000);
 					
-					MessageHandler senderHandler = new MessageHandler(moveSender.getInputStream(), moveSender.getOutputStream(), logger);
-					
-					String data = "";
-
-					ArrayList<String> toRemove = new ArrayList<String>();
-					
-					synchronized(keyvalue){
-						for(String key : keyvalue.keySet()){
-							String hashedkey= conHashing.getHashedKey(key);
-							System.out.println(hashedkey);
-							
-							if(to.compareTo(from) < 0){
-								if(hashedkey.compareTo(from) > 0 || hashedkey.compareTo(to) < 0){
-									toRemove.add(key);
-									String value = keyvalue.get(key);
-										data += (key + " " + value);
-									data += ".";									
-								}
-								continue;
-							}
-							
-							if(hashedkey.compareTo(from) > 0 && hashedkey.compareTo(to) < 0){
-								toRemove.add(key);
-								String value = keyvalue.get(key);
-									data += (key + " " + value);
-								data += ".";
-							}
-						}
-					}
-
-					dataMessage.setData(data);
-
-					senderHandler.sendMessage(dataMessage.serialize().getMsg());
-					
-					for(String key: toRemove){
-						synchronized(keyvalue){
-							keyvalue.remove(key);
-						}
-					}
+					toRemove = moveData(from, to, ip);
 					break;
 				case RECEIVE:
-					serverMove = new ServerSocket(30000);
-					Socket clientMove = serverMove.accept();
-					
-					
-					InputStream moveinput = clientMove.getInputStream();
-					MessageHandler receiverHandler = new MessageHandler(moveinput, null, logger);
-					byte [] datab = receiverHandler.receiveMessage();
-
-					String datamsg = new String(datab, "UTF-8");
-
-					System.out.println("ssss");
-					
-					String [] pairs = datamsg.split(".");
-					
-					for(String pair : pairs){
-						String[] kvpair = pair.split(" ");
-						if(kvpair.length == 2){
-							synchronized(keyvalue){
-								keyvalue.put(kvpair[0], kvpair[1]);
-							}
-						}
-					}
-					
-					serverMove.close();
-					clientMove.close();
-					moveinput.close();
-					
+					receiveData();
 					break;
 				case SHUTDOWN:
 					shutDown();
@@ -239,13 +166,18 @@ public class KVServer{
 					break;
 				case UPDATE:
 					meta = message.getMetadata();
+					setMetadata(meta);
+					break;
+				case WRITELOCK:
+					lock = !lock;
+					if(toRemove != null)
+						removeData(toRemove);
 					break;
 				default:
 					break;
 				
 				}
 								
-//				System.out.println(msg);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				logger.error(e);
@@ -265,7 +197,7 @@ public class KVServer{
 
 			messageHandler = new MessageHandler(input, output, logger);
 			
-			port = 50003;
+			port = 50000;
 
 			KVAdminMessage msg = new KVAdminMessage();
 			msg.setStatusType(StatusType.RECEIVED);			
@@ -311,7 +243,7 @@ public class KVServer{
      */
     
     public void initKVServer(Metadata metadata, int cacheSize, String displacementStrategy){
-    	this.metadata = metadata;
+    	this.setMetadata(metadata);
     	this.cacheSize = cacheSize;
 		this.strategy = StrategyFactory.getStrategy(displacementStrategy);
 		shutdown = false;
@@ -324,6 +256,7 @@ public class KVServer{
     
     public void start(){
     	running = true;
+    	logger.info("The server is started");
     }
 
     /**
@@ -333,6 +266,7 @@ public class KVServer{
     
     public void stop(){
     	running = false;
+    	logger.info("The server is stopped");
     }
     
     /**
@@ -341,6 +275,7 @@ public class KVServer{
     
     public void shutDown(){
     	shutdown = true;
+    	logger.info("The server is shutdown");
     }
 
     /**
@@ -348,6 +283,7 @@ public class KVServer{
      */
     public void lockWrite(){
     	lock = true;
+    	logger.info("The server is locked");
     }
     
     /**
@@ -356,6 +292,7 @@ public class KVServer{
     
     public void unLockWrite(){
     	lock = false;
+    	logger.info("The server is unlocked");
     }
     
     /**
@@ -364,18 +301,131 @@ public class KVServer{
 		new KVServer to the ring); send a notification to the ECS, if data 
 		transfer is completed. 
      */
+
     
-//    public void moveData(range, server){
-//    	
-//    	
-//    }
-//    
-//    /**
-//     * Update the meta­data repository of this server 
-//     */
-//    
+    public ArrayList<String> moveData(String from, String to, String ip) throws UnknownHostException, IOException{    	
+
+		ArrayList<String> toRemove = new ArrayList<String>();
+
+    	KVAdminMessage dataMessage = new KVAdminMessage();
+		dataMessage.setStatusType(StatusType.DATA);
+		ConsistentHashing conHashing;
+		try {
+			conHashing = new ConsistentHashing();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+		
+
+		Socket moveSender = new Socket(ip, 30000);
+		
+		MessageHandler senderHandler = new MessageHandler(moveSender.getInputStream(), moveSender.getOutputStream(), logger);
+		
+		String data = "";
+		
+		synchronized(keyvalue){
+			for(String key : keyvalue.keySet()){
+				String hashedkey= conHashing.getHashedKey(key);
+				System.out.println(hashedkey);
+				
+				if(to.compareTo(from) < 0){
+					if(hashedkey.compareTo(from) > 0 || hashedkey.compareTo(to) < 0){
+						toRemove.add(key);
+						String value = keyvalue.get(key);
+							data += (key + " " + value);
+						data += ".";									
+					}
+					continue;
+				}
+				
+				if(hashedkey.compareTo(from) > 0 && hashedkey.compareTo(to) < 0){
+					toRemove.add(key);
+					String value = keyvalue.get(key);
+						data += (key + " " + value);
+					data += ".";
+				}
+			}
+		}
+
+		dataMessage.setData(data);
+
+		senderHandler.sendMessage(dataMessage.serialize().getMsg());
+							
+		moveSender.close();
+
+		KVAdminMessage moveFinished = new KVAdminMessage();
+		moveFinished.setStatusType(StatusType.MOVEFINISH);
+		messageHandler.sendMessage(moveFinished.serialize().getMsg());
+		
+    	logger.info(toRemove.size() + " keyvalue pair are transferred");
+		
+		return toRemove;
+    }
+
+    public void receiveData() throws IOException{
+		serverMove = new ServerSocket(30000);
+		Socket clientMove = serverMove.accept();
+		
+		
+		InputStream moveinput = clientMove.getInputStream();
+		MessageHandler receiverHandler = new MessageHandler(moveinput, null, logger);
+		byte [] datab = receiverHandler.receiveMessage();
+
+		KVAdminMessage receivedData = new KVAdminMessage(datab);
+		receivedData = receivedData.deserialize(receivedData.getMsg());
+		
+		if(receivedData.getStatusType() == StatusType.DATA){
+			String datamsg = receivedData.getData();
+			
+			String [] pairs = datamsg.split(".");
+			if(pairs != null){
+				for(String pair : pairs){
+					String[] kvpair = pair.split(" ");
+					if(kvpair.length == 2){
+						if(keyvalue.size() < cacheSize){
+							synchronized(keyvalue){
+								keyvalue.put(kvpair[0], kvpair[1]);
+							}
+						}else{
+							persistance.store(kvpair[0], kvpair[1]);
+						}
+					}
+				}
+		    	logger.info((pairs.length -1) + " key value pairs are received");
+			}else{
+		    	logger.info("no key value pair is received");				
+			}
+		}else{
+			logger.error("Format of received data is not correct");
+		}
+
+		serverMove.close();
+		clientMove.close();
+
+    }
+    
+    public void removeData(ArrayList<String> toRemove){
+		if(lock == true){
+			for(String key: toRemove){
+				synchronized(keyvalue){
+					keyvalue.remove(key);
+				}
+			}
+		}
+		logger.info(toRemove.size() + "key vlaue pairs are removed");
+
+    }
+    
+    /**
+     * Update the meta­data repository of this server 
+     */
+    
     public void update(Metadata metadata){
-    	this.metadata = metadata;
+    	this.setMetadata(metadata);
+		logger.info("metadata is updated: " + metadata);
+
     }
     
     
@@ -412,5 +462,11 @@ public class KVServer{
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
 			System.exit(1);
 		}
-    }    
+    }
+	public Metadata getMetadata() {
+		return metadata;
+	}
+	public void setMetadata(Metadata metadata) {
+		this.metadata = metadata;
+	}    
 }

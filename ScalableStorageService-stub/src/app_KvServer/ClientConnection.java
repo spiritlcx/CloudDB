@@ -76,7 +76,11 @@ public class ClientConnection implements Runnable {
 					TextMessage receivedMessage = latestMsg.deserialize();
 
 					if(receivedMessage != null){
-						action(receivedMessage);
+						try{
+							action(receivedMessage);
+						}catch(Exception e){
+							logger.error(e.getMessage());
+						}
 					}
 					
 				/* connection either terminated by the client or lost due to 
