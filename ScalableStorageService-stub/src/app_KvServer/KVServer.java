@@ -92,7 +92,7 @@ public class KVServer{
 
 		                Socket client = serverSocket.accept();  
 		                ClientConnection connection = 
-		                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance);
+		                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance, metadata);
 		               (new Thread(connection)).start();
 		                
 		                logger.info("Connected to " 
