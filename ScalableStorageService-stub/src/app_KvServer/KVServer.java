@@ -1,16 +1,25 @@
 package app_KvServer;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import common.messages.KVAdminMessage;
+import common.messages.KVAdminMessage.StatusType;
+import common.messages.MessageHandler;
+import ecs.ConsistentHashing;
 import logger.LogSetup;
+import metadata.Metadata;
 import strategy.Strategy;
 import strategy.StrategyFactory;
 
@@ -18,15 +27,27 @@ public class KVServer{
 	
 	
 	private static Logger logger = Logger.getRootLogger();
+
+	private static final int BUFFER_SIZE = 1024;
+	private static final int DROP_SIZE = 128 * BUFFER_SIZE;
 	
 	private int port;
 	private int cacheSize;
 	private Strategy strategy;
     private ServerSocket serverSocket;
+    private ServerSocket serverMove;
     private Socket clientSocket;
+
+    private InputStream input;
+	private OutputStream output;
+	private MessageHandler messageHandler;
+	
     private boolean running;
+    private boolean shutdown;
+    public static boolean lock;
     private HashMap<String, String> keyvalue;
     private Persistance persistance;
+    private Metadata metadata;
 	/**
 	 * Start KV Server at given port
 	 * @param port given port for storage server to operate
@@ -37,10 +58,9 @@ public class KVServer{
 	 *           currently not contained in the cache. Options are "FIFO", "LRU", 
 	 *           and "LFU".
 	 */
-	public KVServer(int port, int cacheSize, String strategy) {
-		this.port = port;
-		this.cacheSize = cacheSize;
-		this.strategy = StrategyFactory.getStrategy(strategy);
+	public KVServer() {
+		shutdown = false;
+		running = false;
 		keyvalue = new HashMap<String, String>();
 		this.persistance = new Persistance();
 	}
@@ -49,33 +69,43 @@ public class KVServer{
      * Loops until the the server should be closed.
      */
     public void run() {
-        
-    	running = initializeServer();
-        
+
+    	Thread t = new Thread(){
+    		public void run(){
+    			initializeServer();
+    		}
+    	};
+    	
+    	t.start();
+    	try {
+			t.join();
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			logger.error(e1.getMessage());
+		}
+    	
         if(serverSocket != null) {
-	        while(isRunning()){
-	            try {
-	                Socket client = serverSocket.accept();                
-	                ClientConnection connection = 
-	                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance);
-	               (new Thread(connection)).start();
-	                
-	                logger.info("Connected to " 
-	                		+ client.getInetAddress().getHostName() 
-	                		+  " on port " + client.getPort());
-	            } catch (IOException e) {
-	            	logger.error("Error! " +
-	            			"Unable to establish connection. \n", e);
-	            }
+	        while(!shutdown){
+	        	if(running){
+		            try {
+		                Socket client = serverSocket.accept();  
+		                ClientConnection connection = 
+		                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance);
+		               (new Thread(connection)).start();
+		                
+		                logger.info("Connected to " 
+		                		+ client.getInetAddress().getHostName() 
+		                		+  " on port " + client.getPort());
+		            } catch (IOException e) {
+		            	logger.error("Error! " +
+		            			"Unable to establish connection. \n", e);
+		            }
+	        	}
 	        }
         }
         logger.info("Server stopped.");
     }
     
-    private boolean isRunning() {
-        return this.running;
-    }
-
     /**
      * Stops the server insofar that it won't listen at the given port any more.
      */
@@ -89,13 +119,166 @@ public class KVServer{
 		}
     }
 
-    private boolean initializeServer() {
+	
+	private void communicateECS(){
+		while(!shutdown){
+			try {
+				byte [] b =messageHandler.receiveMessage();
+				
+				KVAdminMessage message = new KVAdminMessage(b);
+				message = message.deserialize(new String(b, "UTF-8"));
+				if(message == null){
+					logger.error(message.getMsg() + " is not complete data");
+					continue;
+				}
+				switch(message.getStatusType()){
+				case INIT:
+					Metadata meta = message.getMetadata();
+					int cacheSize = message.getCacheSize();
+					String strategy = message.getDisplacementStrategy();
+					initKVServer(meta, cacheSize, strategy);
+	                System.out.println(cacheSize);
+
+					break;
+				case MOVE:
+					
+					KVAdminMessage dataMessage = new KVAdminMessage();
+					dataMessage.setStatusType(StatusType.DATA);
+					ConsistentHashing conHashing;
+					try {
+						conHashing = new ConsistentHashing();
+					} catch (NoSuchAlgorithmException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						return;
+					}
+					
+					String from = message.getFrom();
+					String to = message.getTo();
+					String ip = message.getIp();
+
+					Socket moveSender = new Socket(ip, 30000);
+					
+					MessageHandler senderHandler = new MessageHandler(moveSender.getInputStream(), moveSender.getOutputStream(), logger);
+					
+					String data = "";
+
+					ArrayList<String> toRemove = new ArrayList<String>();
+					
+					synchronized(keyvalue){
+						for(String key : keyvalue.keySet()){
+							String hashedkey= conHashing.getHashedKey(key);
+							System.out.println(hashedkey);
+							
+							if(to.compareTo(from) < 0){
+								if(hashedkey.compareTo(from) > 0 || hashedkey.compareTo(to) < 0){
+									toRemove.add(key);
+									String value = keyvalue.get(key);
+										data += (key + " " + value);
+									data += ".";									
+								}
+								continue;
+							}
+							
+							if(hashedkey.compareTo(from) > 0 && hashedkey.compareTo(to) < 0){
+								toRemove.add(key);
+								String value = keyvalue.get(key);
+									data += (key + " " + value);
+								data += ".";
+							}
+						}
+					}
+
+					dataMessage.setData(data);
+
+					senderHandler.sendMessage(dataMessage.serialize().getMsg());
+					
+					for(String key: toRemove){
+						synchronized(keyvalue){
+							keyvalue.remove(key);
+						}
+					}
+					break;
+				case RECEIVE:
+					serverMove = new ServerSocket(30000);
+					Socket clientMove = serverMove.accept();
+					
+					
+					InputStream moveinput = clientMove.getInputStream();
+					MessageHandler receiverHandler = new MessageHandler(moveinput, null, logger);
+					byte [] datab = receiverHandler.receiveMessage();
+
+					String datamsg = new String(datab, "UTF-8");
+
+					System.out.println("ssss");
+					
+					String [] pairs = datamsg.split(".");
+					
+					for(String pair : pairs){
+						String[] kvpair = pair.split(" ");
+						if(kvpair.length == 2){
+							synchronized(keyvalue){
+								keyvalue.put(kvpair[0], kvpair[1]);
+							}
+						}
+					}
+					
+					serverMove.close();
+					clientMove.close();
+					moveinput.close();
+					
+					break;
+				case SHUTDOWN:
+					shutDown();
+					break;
+				case START:
+					start();
+					break;
+				case STOP:
+					stop();
+					break;
+				case UPDATE:
+					meta = message.getMetadata();
+					break;
+				default:
+					break;
+				
+				}
+								
+//				System.out.println(msg);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				logger.error(e);
+				shutdown = true;
+				return;
+			}
+		}
+	}
+    
+    private void initializeServer() {
     	logger.info("Initialize server ...");
     	
     	try {
 			clientSocket = new Socket("127.0.0.1", 40000);
+			output = clientSocket.getOutputStream();
+			input = clientSocket.getInputStream();
 
-			System.out.println(clientSocket.getInputStream().read());
+			messageHandler = new MessageHandler(input, output, logger);
+			
+			port = 50003;
+
+			KVAdminMessage msg = new KVAdminMessage();
+			msg.setStatusType(StatusType.RECEIVED);			
+			msg.setPort(port);
+			
+			messageHandler.sendMessage(msg.serialize().getMsg());
+			
+			new Thread(){
+				public void run(){
+					communicateECS();
+				}
+			}.start();
+			
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
 			logger.error(e1.getMessage());
@@ -106,20 +289,16 @@ public class KVServer{
     	
     	try {
             serverSocket = new ServerSocket(port);
-            System.out.println(serverSocket);
             logger.info("Server listening on port: " 
             		+ serverSocket.getLocalPort());    
-            return true;
         
         } catch (IOException e) {
         	logger.error("Error! Cannot open server socket:");
             if(e instanceof BindException){
             	logger.error("Port " + port + " is already bound!");
             }
-            return false;
         } catch (Exception e){
         	logger.error(e.getMessage());
-        	return false;
         }
     }
     
@@ -131,9 +310,12 @@ public class KVServer{
 		processed. 
      */
     
-//    public void initKVServer(metadata, cacheSize, displacementStrategy){
-//    	jj;
-//    }
+    public void initKVServer(Metadata metadata, int cacheSize, String displacementStrategy){
+    	this.metadata = metadata;
+    	this.cacheSize = cacheSize;
+		this.strategy = StrategyFactory.getStrategy(displacementStrategy);
+		shutdown = false;
+    }
 
     /**
      *Starts the KVServer, all client requests and all ECS requests are 
@@ -141,7 +323,7 @@ public class KVServer{
      */
     
     public void start(){
-    	
+    	running = true;
     }
 
     /**
@@ -150,7 +332,7 @@ public class KVServer{
      */
     
     public void stop(){
-    	
+    	running = false;
     }
     
     /**
@@ -158,14 +340,14 @@ public class KVServer{
      */
     
     public void shutDown(){
-    	
+    	shutdown = true;
     }
 
     /**
      *Lock the KVServer for write operations. 
      */
     public void lockWrite(){
-    	
+    	lock = true;
     }
     
     /**
@@ -173,7 +355,7 @@ public class KVServer{
      */
     
     public void unLockWrite(){
-    	
+    	lock = false;
     }
     
     /**
@@ -192,9 +374,9 @@ public class KVServer{
 //     * Update the meta­data repository of this server 
 //     */
 //    
-//    public void update(metadata){
-//    	
-//    }
+    public void update(Metadata metadata){
+    	this.metadata = metadata;
+    }
     
     
     /**
@@ -204,21 +386,23 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			new LogSetup("logs/server.log", Level.ALL);
-			if(args.length != 3) {
-				System.out.println("Error! Invalid number of arguments!");
-				System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
-			} else {
-				int port = Integer.parseInt(args[0]);
-				int cacheSize = Integer.parseInt(args[1]);
-				String strategy =args[2];
-				if(strategy.equals("FIFO") || strategy.equals("LRU") || strategy.equals("LFU")){
-					new KVServer(port, cacheSize, strategy).run();
-				}
-				else{
-					System.out.println("Error! Invalid argument <strategy>! Must be one of the following: FIFO | LFU | LRU!");
-					System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
-				}
-			}
+			KVServer kvserver = new KVServer();
+			kvserver.run();
+//			if(args.length != 3) {
+//				System.out.println("Error! Invalid number of arguments!");
+//				System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
+//			} else {
+//				int port = Integer.parseInt(args[0]);
+//				int cacheSize = Integer.parseInt(args[1]);
+//				String strategy =args[2];
+//				if(strategy.equals("FIFO") || strategy.equals("LRU") || strategy.equals("LFU")){
+//					new KVServer(port, cacheSize, strategy).run();
+//				}
+//				else{
+//					System.out.println("Error! Invalid argument <strategy>! Must be one of the following: FIFO | LFU | LRU!");
+//					System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
+//				}
+//			}
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize logger!");
 			e.printStackTrace();

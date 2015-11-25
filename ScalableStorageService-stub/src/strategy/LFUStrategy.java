@@ -2,7 +2,7 @@ package strategy;
 
 import java.util.HashMap;
 
-public class LFUStrategy extends Strategy {
+public class LFUStrategy implements Strategy {
 
 	private HashMap<String, Integer> keyrating;
 	
@@ -28,12 +28,7 @@ public class LFUStrategy extends Strategy {
 			}
 		}
 		
-		if(!lowestKey.equals(""))
-		{
-			keyrating.remove(lowestKey);
-			return lowestKey;
-		}
-		return null;
+		return lowestKey;
 	}
 
 	/**
@@ -43,15 +38,18 @@ public class LFUStrategy extends Strategy {
 	 */
 	@Override
 	public void add(String key) {
-		
-		if(keyrating.containsKey(key)){
-			Integer rating = keyrating.get(key) + 1;
-			keyrating.remove(key);
-			keyrating.put(key, rating);
-		}
-		else
-		{
-			keyrating.put(key, 1);
-		}
+		keyrating.put(key, 1);
 	}
+	@Override
+	public void remove(String key) {
+		// TODO Auto-generated method stub
+		keyrating.remove(key);
+	}
+
+	@Override
+	public void update(String key) {
+		// TODO Auto-generated method stub
+		keyrating.put(key, keyrating.get(key) + 1);
+	}
+
 }

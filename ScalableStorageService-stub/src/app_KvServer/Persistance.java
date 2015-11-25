@@ -48,6 +48,33 @@ public class Persistance {
 	 * @param key The key to be looked for.
 	 * @return The value associated with this key.
 	 */
+	
+	public String read(){
+		String keyvalue;
+		try {
+				reader = new BufferedReader(new FileReader(file));
+			
+				if((keyvalue = reader.readLine())!=null){
+
+					String [] kvpair = keyvalue.split(",", 2);
+					if(kvpair != null){
+						reader.close();
+						reader = null;
+						return kvpair[0];
+					}
+				}
+				reader.close();
+				reader = null;
+		} catch (IOException e) {
+			Logger.getRootLogger().error("Data lookup error.", e);
+		} finally{
+			
+		}
+
+		return null;
+		
+	}
+	
 	public String lookup(String key){
 		String keyvalue;
 		try {
