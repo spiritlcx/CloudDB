@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.ServerSocket;
 import java.util.HashMap;
 
 import metadata.Metadata;
@@ -31,6 +32,7 @@ public class ClientConnection implements Runnable {
 	private static final int DROP_SIZE = 128 * BUFFER_SIZE;
 	
 	private Socket clientSocket;
+	private ServerSocket serverSocket;
 	private InputStream input;
 	private OutputStream output;
 
@@ -50,8 +52,9 @@ public class ClientConnection implements Runnable {
 	 * @param persistance Instance of Persictance class, which handles the reading and writing to the storage file.
 	 * @param metadata Metadata set of the server.
 	 */
-	public ClientConnection(Socket clientSocket, HashMap<String, String> keyvalue, int cacheSize, Strategy strategy, Persistance persistance, Metadata metadata) {
+	public ClientConnection(Socket clientSocket, ServerSocket serverSocket, HashMap<String, String> keyvalue, int cacheSize, Strategy strategy, Persistance persistance, Metadata metadata) {
 		this.clientSocket = clientSocket;
+		this.serverSocket = serverSocket;
 		this.keyvalue = keyvalue;
 		this.isOpen = true;
 		this.cacheSize = cacheSize;
@@ -218,7 +221,7 @@ public class ClientConnection implements Runnable {
 			
 			String[] server = metadata.getServer(receivedMessage.getKey());
 			
-			if(server != null && server[0].equals(clientSocket.getLocalSocketAddress().toString()) && server[1].equals("" + clientSocket.getLocalPort())){
+			if(server != null && server[0].equals(serverSocket.getLocalSocketAddress().toString()) && server[1].equals("" + serverSocket.getLocalPort())){
 				if(receivedMessage.getValue().equals("null")){
 					if(keyvalue.get(receivedMessage.getKey()) != null){
 						sentMessage.setValue(keyvalue.get(receivedMessage.getKey()));
@@ -336,6 +339,7 @@ public class ClientConnection implements Runnable {
 			else{
 				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
 				sentMessage.setKey(receivedMessage.getKey());
+				sentMessage.setValue(receivedMessage.getValue());
 				sentMessage.setMetadata(metadata);
 				
 				try {

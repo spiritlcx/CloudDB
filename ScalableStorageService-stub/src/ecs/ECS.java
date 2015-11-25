@@ -29,7 +29,8 @@ public class ECS {
 	private static String end = "ffffffffffffffffffffffffffffffff";
 
 	private ServerSocket ecsServer;
-
+	boolean running;
+	
 	private TreeMap<String, Socket> hashservers = new TreeMap<String, Socket>();
 	private HashMap<String, ServerConnection> hashthreads = new HashMap<String, ServerConnection>();
 	private ConsistentHashing conHashing;
@@ -39,6 +40,7 @@ public class ECS {
 	
 	public ECS(){
 		try {
+			running = true;
 			conHashing = new ConsistentHashing();
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
@@ -159,6 +161,13 @@ public class ECS {
 		}
 	}
 
+	/*
+	 * stop the ECS itself
+	 */
+	public void stopRunning(){
+		running = false;
+	}
+	
 	/*Create a new KVServer with the specified cache size and 
 	 * displacement strategy and add it to the storage service at an 
 	 * arbitrary position. 
@@ -272,7 +281,7 @@ public class ECS {
 			}
 			addNode(3, "FIFO");
 
-			while(true);
+			while(running);
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

@@ -10,6 +10,7 @@ import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 
@@ -17,6 +18,7 @@ import common.messages.TextMessage;
 import client.ClientSocketListener.SocketStatus;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
+import logger.LogSetup;
 import common.messages.MessageHandler;
 import metadata.Metadata;
 
@@ -44,6 +46,13 @@ public class KVStore extends Thread implements KVCommInterface {
 	 * @throws UnknownHostException 
 	 */
 	public KVStore(String address, int port){
+
+		try {
+			new LogSetup("logs/kvstore.log", Level.ALL);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		this.address = address;
 		this.port = port;

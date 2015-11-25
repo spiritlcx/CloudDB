@@ -86,13 +86,14 @@ public class KVServer{
     	
         if(serverSocket != null) {
 	        while(!shutdown){
+            	System.out.println("not running");
 	        	if(running){
 		            try {
 		            	System.out.println("running");
 
 		                Socket client = serverSocket.accept();  
 		                ClientConnection connection = 
-		                		new ClientConnection(client, keyvalue, cacheSize, strategy, persistance, metadata);
+		                		new ClientConnection(client, serverSocket, keyvalue, cacheSize, strategy, persistance, metadata);
 		               (new Thread(connection)).start();
 		                
 		                logger.info("Connected to " 
@@ -197,7 +198,7 @@ public class KVServer{
 
 			messageHandler = new MessageHandler(input, output, logger);
 			
-			port = 50000;
+			port = 50004;
 
 			KVAdminMessage msg = new KVAdminMessage();
 			msg.setStatusType(StatusType.RECEIVED);			
@@ -328,7 +329,6 @@ public class KVServer{
 		synchronized(keyvalue){
 			for(String key : keyvalue.keySet()){
 				String hashedkey= conHashing.getHashedKey(key);
-				System.out.println(hashedkey);
 				
 				if(to.compareTo(from) < 0){
 					if(hashedkey.compareTo(from) > 0 || hashedkey.compareTo(to) < 0){

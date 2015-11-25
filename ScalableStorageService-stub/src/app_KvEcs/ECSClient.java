@@ -43,12 +43,13 @@ public class ECSClient {
 	 * @param cmdLine The latest command line input
 	 */
 	private void handleCommand(String cmdLine) {
-		String[] tokens = cmdLine.split("\\s+", 3);
+		String[] tokens = cmdLine.split("\\s+", 4);
 
 		if(tokens[0].equals("quit")) {	
 			stop = true;
 			if(ecs != null){
 				ecs.shutDown();
+				ecs.stopRunning();
 			}
 			System.out.println(PROMPT + "Application exit!");
 		
