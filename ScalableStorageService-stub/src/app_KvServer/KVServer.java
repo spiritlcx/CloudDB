@@ -312,8 +312,8 @@ public class KVServer{
     	logger.info("The server is unlocked");
     }
     
-    /**
-     * Transfer a subset (range) of the KVServer’s data to another 
+/*    /**
+     * Transfer a subset (range) of the KVServer's data to another 
 		KVServer (reallocation before removing this server or adding a 
 		new KVServer to the ring); send a notification to the ECS, if data 
 		transfer is completed. 

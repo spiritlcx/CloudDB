@@ -22,7 +22,19 @@ public class ServerConnection extends Thread{
 	private String displacementStrategy;
 	private Metadata metadata;
 	private Logger logger;
+
+	/**
+	 * This class handles the connection to the server.
+	 * @param input		Input stream of the connected kvserver socket.
+	 * @param output	Output stream of the connected kvserver socket.
+	 * @param cacheSize	cacheSize of the KVServer.
+	 * @param displacementStrategy	displacementStrategy of the KVServer.
+	 * @param metadata	Metadata of the ECS,
+	 * @param logger	Logger of the ECS.
+	 */
+
 	public ServerConnection(final InputStream input,final OutputStream output, final int cacheSize, final String displacementStrategy, final Metadata metadata, final Logger logger){
+	
 		this.input = input;
 		this.output = output;
 		this.cacheSize = cacheSize;
@@ -32,6 +44,9 @@ public class ServerConnection extends Thread{
 		messageHandler = new MessageHandler(input, output, logger);
 	}
 	
+	/**
+	 * Sends initialization message to the KVServer.
+	 */
 	@Override
 	public void run(){
 		KVAdminMessage initMessage = new KVAdminMessage();

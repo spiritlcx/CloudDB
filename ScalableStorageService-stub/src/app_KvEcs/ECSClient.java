@@ -36,13 +36,12 @@ public class ECSClient {
 	}
 	
 	/**
-	 * The handleCommand methods handles all possible commands entered into the
-	 * command line. The put and get request is passed to the KVStore-Library, which
-	 * handles serialization and sending of the message.	
+	 * The handleCommand method handles all possible commands entered into the
+	 * command line. 	
 	 * @param cmdLine The latest command line input
 	 */
 	private void handleCommand(String cmdLine) {
-		String[] tokens = cmdLine.split("\\s+", 4);
+		String[] tokens = cmdLine.split("\\s+");
 
 		if(tokens[0].equals("quit")) {	
 			stop = true;
@@ -226,7 +225,7 @@ public class ECSClient {
 		}
 	}
 	/**
-	 * Handles incoming messages on the client. Prints msg
+	 * Handles incoming messages on the ecs client. Prints msg
 	 * after the PROMT String.
 	 */
 	public void handleNewMessage(TextMessage msg) {
