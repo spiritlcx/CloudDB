@@ -1,5 +1,6 @@
 package metadata;
 
+import java.io.Serializable;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
@@ -9,7 +10,7 @@ import ecs.ConsistentHashing;
 import ecs.ECS;
 import ecs.Server;
 
-public class Metadata {
+public class Metadata implements Serializable{
 	private List<Server> servers = new LinkedList<Server>();
 	public void add(Server server){
 		servers.add(server);

@@ -20,7 +20,7 @@ import common.messages.KVMessage.StatusType;
 import common.messages.MessageHandler;
 import metadata.Metadata;
 
-public class KVStore extends Thread implements KVCommInterface {	
+public class KVStore implements KVCommInterface {	
 	private Logger logger = Logger.getRootLogger();
 	private Set<ClientSocketListener> listeners;
 	private MessageHandler messageHandler;

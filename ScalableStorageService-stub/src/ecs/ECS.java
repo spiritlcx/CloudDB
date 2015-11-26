@@ -205,7 +205,7 @@ public class ECS {
 					try {
 						Socket kvserver;
 						while((kvserver = ecsServer.accept()) != null){
-							if(kvserver.getInetAddress().equals("/" + newworkingserver.ip) && kvserver.getPort() == Integer.parseInt(newworkingserver.port)){
+							if(kvserver.getInetAddress().toString().equals("/" + newworkingserver.ip) && kvserver.getPort() == Integer.parseInt(newworkingserver.port)){
 								ServerConnection connection = new ServerConnection(kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
 								hashthreads.put(newworkingserver.hashedkey, connection);
 								hashservers.put(newworkingserver.hashedkey, kvserver);

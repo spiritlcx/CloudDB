@@ -26,7 +26,8 @@ public class ECSClient {
 			
 			try {
 				String cmdLine = stdin.readLine();
-				this.handleCommand(cmdLine);
+				if(cmdLine != null)
+					this.handleCommand(cmdLine);
 			} catch (IOException e) {
 				stop = true;
 				printError("CLI does not respond - Application terminated ");
