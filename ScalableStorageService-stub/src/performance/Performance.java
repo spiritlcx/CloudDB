@@ -1,5 +1,8 @@
 package performance;
 
+import java.io.IOException;
+import java.net.UnknownHostException;
+
 import client.KVStore;
 import ecs.ECS;
 
@@ -33,8 +36,25 @@ public class Performance {
 		for(int i = 0; i < clients; i++)
 		{
 			this.clients[i] = new KVStore("127.0.0.1", 50000);
+			try {
+				this.clients[i].connect();
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 	
+	}
+	
+	public void finish(){
+		for(int i = 0; i < clients.length; i++)
+		{
+			this.clients[i].disconnect();
+		}
+
 	}
 	
 	public void meassurePut()
@@ -104,8 +124,12 @@ public class Performance {
 			Performance performance = new Performance(Integer.parseInt(args[0]), Integer.parseInt(args[1]), Integer.parseInt(args[2]), args[3]);
 			performance.meassurePut();
 			performance.meassureGet();
-			performance.meassureAdd();
-			performance.meassureRemove();
+//			performance.meassureAdd();
+//			performance.meassureRemove();
+			
+			performance.finish();
+			
+			
 		}
 
 	}

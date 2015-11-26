@@ -117,15 +117,16 @@ public class Metadata implements Serializable{
 			if(servers.get(i) == toRemove){
 				if(i == servers.size() - 1){
 					servers.get(0).from = toRemove.from;
+					servers.remove(toRemove);
 					return servers.get(0);
 				}
 				else{
 					servers.get(i+1).from = toRemove.from;
+					servers.remove(toRemove);
 					return servers.get(i+1);
 				}
 			}
 		}
-		servers.remove(toRemove);
 		return null;
 	}
 	
