@@ -1,4 +1,4 @@
-package app_KvEcs;
+package app_kvEcs;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -8,8 +8,6 @@ import logger.LogSetup;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import app_KvClient.KVClient;
 
 import common.messages.TextMessage;
 import ecs.ECS;
@@ -37,13 +35,12 @@ public class ECSClient {
 	}
 	
 	/**
-	 * The handleCommand methods handles all possible commands entered into the
-	 * command line. The put and get request is passed to the KVStore-Library, which
-	 * handles serialization and sending of the message.	
+	 * The handleCommand method handles all possible commands entered into the
+	 * command line. 	
 	 * @param cmdLine The latest command line input
 	 */
 	private void handleCommand(String cmdLine) {
-		String[] tokens = cmdLine.split("\\s+", 3);
+		String[] tokens = cmdLine.split("\\s+");
 
 		if(tokens[0].equals("quit")) {	
 			stop = true;
@@ -223,7 +220,7 @@ public class ECSClient {
 		}
 	}
 	/**
-	 * Handles incoming messages on the client. Prints msg
+	 * Handles incoming messages on the ecs client. Prints msg
 	 * after the PROMT String.
 	 */
 	public void handleNewMessage(TextMessage msg) {

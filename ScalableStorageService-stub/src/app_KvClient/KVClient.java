@@ -1,4 +1,4 @@
-package app_KvClient;
+package app_kvClient;
 
 import java.io.BufferedReader;
 import java.io.IOException;

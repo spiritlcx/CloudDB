@@ -1,4 +1,4 @@
-package app_KvServer;
+package app_kvServer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -358,22 +358,21 @@ public class KVServer{
     	lock = false;
     }
     
-    /**
-     * Transfer a subset (range) of the KVServer’s data to another 
+/*    /**
+     * Transfer a subset (range) of the KVServer's data to another 
 		KVServer (reallocation before removing this server or adding a 
 		new KVServer to the ring); send a notification to the ECS, if data 
 		transfer is completed. 
-     */
+     
     
-//    public void moveData(range, server){
-//    	
-//    	
-//    }
-//    
-//    /**
-//     * Update the meta­data repository of this server 
-//     */
-//    
+    public void moveData(range, server){
+    	
+    	
+    }*/
+    
+    /**
+     * Update the meta�data repository of this server 
+     */
     public void update(Metadata metadata){
     	this.metadata = metadata;
     }

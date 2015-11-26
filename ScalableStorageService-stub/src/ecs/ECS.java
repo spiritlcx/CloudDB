@@ -45,13 +45,14 @@ public class ECS {
 		}
 	}
 	
-	/*Randomly choose <numberOfNodes> servers from the available 
-		machines and start the KVServer by issuing a SSH call to the 
-		respective machine. This call launches the server with the 
-		specified cache size and displacement strategy. You can 
-		assume that the KVServer.jar is located in the same directory as 
-		the ECS. All servers are initialized with the meta­data and 
-		remain in state stopped.
+	/**
+	 * Randomly choose <numberOfNodes> servers from the available 
+	 * machines and start the KVServer by issuing a SSH call to the 
+	 * respective machine. This call launches the server with the 
+	 * specified cache size and displacement strategy. You can 
+	 * assume that the KVServer.jar is located in the same directory as 
+	 * the ECS. All servers are initialized with the meta­data and 
+	 * remain in state stopped.
 	 */
 	public void initService (int numberOfNodes, int cacheSize, String displacementStrategy){
 		File file = new File("ecs.config");
@@ -124,8 +125,9 @@ public class ECS {
 		}
 	}
 		
-	/* Starts the storage service by calling start() on all KVServer 
-		instances that participate in the service. 
+	/**
+	 *  Starts the storage service by calling start() on all KVServer 
+	 *  instances that participate in the service. 
 	 */
 	public void start(){
 		for(String key : hashthreads.keySet()){
@@ -134,8 +136,9 @@ public class ECS {
 		}
 	}
 	
-	/* Stops the service; all participating KVServers are stopped for 
-		processing client requests but the processes remain running. 
+	/**
+	 *  Stops the service; all participating KVServers are stopped for 
+	 *  processing client requests but the processes remain running. 
 	 */
 	
 	public void stop(){
@@ -146,7 +149,8 @@ public class ECS {
 	}
 	
 	
-	/* Stops all server instances and exits the remote processes. 
+	/**
+	 *  Stops all server instances and exits the remote processes. 
 	 */
 	public void shutDown(){
 		for(String key : hashthreads.keySet()){
@@ -155,7 +159,8 @@ public class ECS {
 		}
 	}
 
-	/*Create a new KVServer with the specified cache size and 
+	/**
+	 * Create a new KVServer with the specified cache size and 
 	 * displacement strategy and add it to the storage service at an 
 	 * arbitrary position. 
 	 */
@@ -200,7 +205,8 @@ public class ECS {
 		}
 	}
 
-	/* Remove a node from the storage service at an arbitrary position. 
+	/**
+	 *  Remove a node from the storage service at an arbitrary position. 
 	 */
 	public void removeNode(){
 		
@@ -254,7 +260,6 @@ public class ECS {
 						break;
 					}
 				}
-				addNode(3, "FIFO");
 
 			}
 			
