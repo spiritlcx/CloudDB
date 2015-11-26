@@ -296,6 +296,14 @@ public class ECS {
 //		}.start();
 //	}
 
+	public ArrayList<Server> getServers(){
+		return workingservers;
+	}
+	
+	public Metadata getMetaData(){
+		return metadata;
+	}
+	
 	public void startEcs(final int port, final int numberOfNodes, final int cacheSize, final String displacementStrategy){
 
 		try {

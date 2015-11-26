@@ -60,6 +60,12 @@ public class KVServer{
 	 *           and "LFU".
 	 */
 	public KVServer() {
+		try {
+			new LogSetup("logs/server.log", Level.ALL);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		shutdown = false;
 		running.set(false);
 		keyvalue = new HashMap<String, String>();
@@ -68,8 +74,8 @@ public class KVServer{
      * Initializes and starts the server. 
      * Loops until the the server should be closed.
      */
-    public void run() {
-
+    public void run(int port) {
+    	this.port = port;
     	try {
 			initializeServer();
 		} catch (Exception e2) {
@@ -208,8 +214,6 @@ public class KVServer{
 
 			messageHandler = new MessageHandler(input, output, logger);
 			
-			port = 50002;
-
 			KVAdminMessage msg = new KVAdminMessage();
 			msg.setStatusType(StatusType.RECEIVED);
 			msg.setPort(port);
@@ -260,7 +264,7 @@ public class KVServer{
      *Starts the KVServer, all client requests and all ECS requests are 
 	 *processed.  
      */
-    
+
     public void start(){
     	synchronized(running){
     		running.set(true);
@@ -453,22 +457,7 @@ public class KVServer{
     	try {
 			new LogSetup("logs/server.log", Level.ALL);
 			KVServer kvserver = new KVServer();
-			kvserver.run();
-//			if(args.length != 3) {
-//				System.out.println("Error! Invalid number of arguments!");
-//				System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
-//			} else {
-//				int port = Integer.parseInt(args[0]);
-//				int cacheSize = Integer.parseInt(args[1]);
-//				String strategy =args[2];
-//				if(strategy.equals("FIFO") || strategy.equals("LRU") || strategy.equals("LFU")){
-//					new KVServer(port, cacheSize, strategy).run();
-//				}
-//				else{
-//					System.out.println("Error! Invalid argument <strategy>! Must be one of the following: FIFO | LFU | LRU!");
-//					System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
-//				}
-//			}
+			kvserver.run(50004);
 		} catch (IOException e) {
 			System.out.println("Error! Unable to initialize logger!");
 			e.printStackTrace();

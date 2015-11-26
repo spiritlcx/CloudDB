@@ -17,7 +17,7 @@ public class LFUStrategy implements Strategy {
 	@Override
 	public String get() {
 		Integer lowestRating = Integer.MAX_VALUE;
-		String lowestKey = "";
+		String lowestKey = null;
 		
 		for(String key : keyrating.keySet())
 		{

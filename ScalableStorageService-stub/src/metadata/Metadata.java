@@ -16,6 +16,9 @@ public class Metadata implements Serializable{
 		servers.add(server);
 	}
 
+	public int size(){
+		return servers.size();
+	}
 	public Server putServer(Server server){
 		if(servers.size() == 1){
 			server.from = servers.get(0).hashedkey;

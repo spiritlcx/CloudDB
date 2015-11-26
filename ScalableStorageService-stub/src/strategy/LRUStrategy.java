@@ -12,6 +12,8 @@ public class LRUStrategy implements Strategy {
 	 */
 	@Override
 	public String get() {
+		if(lists.size() == 0)
+			return null;
 		return lists.get(lists.size() - 1);
 	}
 

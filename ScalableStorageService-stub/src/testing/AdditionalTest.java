@@ -6,6 +6,7 @@ import java.security.NoSuchAlgorithmException;
 
 import org.junit.Test;
 
+import app_KvServer.KVServer;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
 
@@ -25,36 +26,82 @@ public class AdditionalTest extends TestCase {
 	//Test ECS, consistent hashing, locks, metadata-update and retry operations
 		
 	//just needs to reach the end
-	@Test
-	public void testECS(){
+	
+	public void setUp() {
+		int numnode = 8;
+		int cacheSize = 10;
 		ecs = new ECS();
-		ecs.startEcs(40000, 5, 5, "FIFO");
-		ecs.addNode(5, "FIFO");
-		ecs.removeNode();
-		ecs.shutDown();
-		assertTrue(true);
+		ecs.startEcs(40000, numnode, cacheSize, "FIFO");
+
+		for(int i = 0; i < numnode; i++){
+			final int index = i;
+			new Thread(){
+				public void run(){
+					KVServer kvServer = new KVServer();
+					kvServer.run(50000+index);
+				}
+			}.start();
+		}
+		ecs.start();
+	}
+
+	
+	@Test
+	public void testRemoveNode(){
+		Exception e1 = null;
+		int size = ecs.getServers().size();
+		try{
+			ecs.removeNode();
+		}catch(Exception e){
+			e1 = e;
+		}
+		assert(e1 == null && ecs.getServers().size() == size-1);
+	}
+	
+	@Test
+	public void testAddNode(){
+		Exception e1 = null;
+		int size = ecs.getServers().size();
+		try{
+			ecs.addNode(3, "FIFO");
+		}catch(Exception e){
+			e1 = e;
+		}
+		assert(e1 == null && ecs.getServers().size() == size+1);
+		
+	}
+	
+	@Test
+	public void testHashing(){
+		ConsistentHashing hashing;
+		String hashedKey = null;
+		try {
+			hashing = new ConsistentHashing();
+			hashedKey = hashing.getHashedKey("Test");
+
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		assertTrue(hashedKey.equals("0cbc6611f5540bd0809a388dc95a615b"));
+	}
+
+	
+	@Test
+	public void testUpdateMeta(){
+		Exception e1 = null;
+		int size = ecs.getMetaData().size();
+		try{
+			ecs.addNode(3, "FIFO");
+		}catch(Exception e){
+			e1 = e;
+		}
+		assert(e1 == null && ecs.getMetaData().size() == size + 1);
+
 	}
 	
 		@Test
-		public void testHashing(){
-			ConsistentHashing hashing;
-			String hashedKey = null;
-			try {
-				hashing = new ConsistentHashing();
-				hashedKey = hashing.getHashedKey("Test");
-
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			assertTrue(hashedKey.equals("0cbc6611f5540bd0809a388dc95a615b"));
-			
-		}
-		
-		@Test
 		public void testLock(){
-			ecs = new ECS();
-			ecs.startEcs(40000, 5, 5, "FIFO");
 			ecs.stop();
 			
 			KVStore client = new KVStore("127.0.0.1", 50000);

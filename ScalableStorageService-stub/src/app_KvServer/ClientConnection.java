@@ -320,7 +320,7 @@ public class ClientConnection implements Runnable {
 							sentMessage.setStatusType(StatusType.PUT_ERROR);
 						}
 					}else{
-						if(keyvalue.size() == cacheSize){
+						if(keyvalue.size() >= cacheSize){
 							String key = strategy.get();
 							String value = keyvalue.get(key);
 							persistance.store(key, value);

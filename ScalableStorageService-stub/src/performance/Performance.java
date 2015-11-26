@@ -2,16 +2,14 @@ package performance;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 
+import app_KvServer.KVServer;
 import client.KVStore;
-import ecs.ECS;
 
 public class Performance {
 
 	KVStore[] clients;
-	ECS ecs;
-	int cacheSize;
-	String strategy;
 	
 	/**
 	 * Class that can be used for scaled performance measurements.
@@ -24,18 +22,12 @@ public class Performance {
 	 * @param cacheSize	Desired cacheSize on each server
 	 * @param strategy	Storage strategy
 	 */
-	public Performance(int servers, int clients, int cacheSize, String strategy){
-		ecs = new ECS();
-		ecs.startEcs(40000, servers, cacheSize, strategy);
-		ecs.start();
-		
+	public Performance(int clients){
 		this.clients = new KVStore[clients];
-		this.cacheSize = cacheSize;
-		this.strategy = strategy;
 		
 		for(int i = 0; i < clients; i++)
 		{
-			this.clients[i] = new KVStore("127.0.0.1", 50000);
+			this.clients[i] = new KVStore("127.0.0.1", 50004);
 			try {
 				this.clients[i].connect();
 			} catch (UnknownHostException e) {
@@ -62,7 +54,11 @@ public class Performance {
 		long startTime = System.currentTimeMillis();
 
 		try{
-	      clients[1].put("1", "Some message");
+			for(int i = 0; i < clients.length; i++){
+				for(int j = 0; j < 20000; j++){
+					clients[i].put(""+i+j, "Some message");
+				}
+			}
 		} 
 		catch(Exception e){
 		}
@@ -77,7 +73,11 @@ public class Performance {
 		long startTime = System.currentTimeMillis();
 
 		try{
-	      clients[1].get("1");
+			for(int i = 0; i < clients.length; i++){
+				for(int j = 0; j < 20000; j++){
+					clients[i].get(""+i+j);
+				}
+			}
 		} 
 		catch(Exception e){
 		}
@@ -86,43 +86,15 @@ public class Performance {
 	      long elapsedTime = stopTime - startTime;
 	      System.out.println(elapsedTime);
 	}
-	
-	public void meassureAdd(){
-		long startTime = System.currentTimeMillis();
-
-		try{
-	      ecs.addNode(cacheSize, strategy);
-		} 
-		catch(Exception e){
-		}
-
-	      long stopTime = System.currentTimeMillis();
-	      long elapsedTime = stopTime - startTime;
-	      System.out.println(elapsedTime);
-	}
-	
-	public void meassureRemove(){
-		long startTime = System.currentTimeMillis();
-
-		try{
-	      ecs.removeNode();
-		} 
-		catch(Exception e){
-		}
-
-	      long stopTime = System.currentTimeMillis();
-	      long elapsedTime = stopTime - startTime;
-	      System.out.println(elapsedTime);
-	}
-	
+		
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		if(args.length == 4)
-		{
-			Performance performance = new Performance(Integer.parseInt(args[0]), Integer.parseInt(args[1]), Integer.parseInt(args[2]), args[3]);
-			performance.meassurePut();
+//		if(args.length == 1)
+//		{
+			Performance performance = new Performance(1);
+//			performance.meassurePut();
 			performance.meassureGet();
 //			performance.meassureAdd();
 //			performance.meassureRemove();
@@ -130,7 +102,7 @@ public class Performance {
 			performance.finish();
 			
 			
-		}
+//		}
 
 	}
 
