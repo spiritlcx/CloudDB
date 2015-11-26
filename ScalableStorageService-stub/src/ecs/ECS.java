@@ -22,12 +22,11 @@ import logger.LogSetup;
 import metadata.Metadata;
 
 public class ECS {
-	
-	private Logger logger = Logger.getRootLogger();
-	private Metadata metadata = new Metadata();
-	private static String start = "00000000000000000000000000000000";
-	private static String end = "ffffffffffffffffffffffffffffffff";
 
+	final private Logger logger = Logger.getRootLogger();
+	private Metadata metadata = new Metadata();
+	public static String start = "00000000000000000000000000000000";
+	public static String end = "ffffffffffffffffffffffffffffffff";
 	private ServerSocket ecsServer;
 	boolean running;
 	
@@ -116,8 +115,7 @@ public class ECS {
 				}
 
 				for(Server server : workingservers){
-					System.out.println(server.port);
-					System.out.println(server.from + " to " + server.to);
+					logger.info(server);
 				}
 				
 			} catch (IOException e) {
@@ -134,10 +132,14 @@ public class ECS {
 		instances that participate in the service. 
 	 */
 	public void start(){
-		for(String key : hashthreads.keySet()){
-			ServerConnection connection = hashthreads.get(key);
-			connection.startServer();
-		}
+		new Thread(){
+			public void run(){
+				for(String key : hashthreads.keySet()){
+					ServerConnection connection = hashthreads.get(key);
+					connection.startServer();
+				}
+			}
+		}.start();
 	}
 	
 	/* Stops the service; all participating KVServers are stopped for 
@@ -145,20 +147,28 @@ public class ECS {
 	 */
 	
 	public void stop(){
-		for(String key : hashthreads.keySet()){
-			ServerConnection connection = hashthreads.get(key);
-			connection.stopServer();
-		}
+		new Thread(){
+			public void run(){
+				for(String key : hashthreads.keySet()){
+					ServerConnection connection = hashthreads.get(key);
+					connection.stopServer();
+				}
+			}
+		}.start();
 	}
 	
 	
 	/* Stops all server instances and exits the remote processes. 
 	 */
 	public void shutDown(){
-		for(String key : hashthreads.keySet()){
-			ServerConnection connection = hashthreads.get(key);
-			connection.shutDown();
-		}
+		new Thread(){
+			public void run(){
+				for(String key : hashthreads.keySet()){
+					ServerConnection connection = hashthreads.get(key);
+					connection.shutDown();
+				}
+			}
+		}.start();
 	}
 
 	/*
@@ -172,118 +182,169 @@ public class ECS {
 	 * displacement strategy and add it to the storage service at an 
 	 * arbitrary position. 
 	 */
-	public void addNode(int newcacheSize, String displacementStrategy){
+	public void addNode(final int newcacheSize, final String displacementStrategy){
 		//If there are idle servers in the repository, randomly pick one of 
 		//them and send an SSH call to invoke the KVServer process.
+
+		new Thread(){
+			public void run(){
 		
-		if(idleservers.size() != 0){
-			Random random = new Random();
-			Server newworkingserver = idleservers.get(random.nextInt(idleservers.size()));
+				if(idleservers.size() != 0){
+					Random random = new Random();
+					Server newworkingserver = idleservers.get(random.nextInt(idleservers.size()));
 
-			//Recalculate and update the meta­data of the storage service
-			newworkingserver.hashedkey = conHashing.getHashedKey(newworkingserver.ip, Integer.parseInt(newworkingserver.port));
-			workingservers.add(newworkingserver);
-			idleservers.remove(newworkingserver);
-
-			Server successor = metadata.putServer(newworkingserver);
-
-			Socket kvserver;
-			try {
-				kvserver = ecsServer.accept();
-				ServerConnection connection = new ServerConnection(this, kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
-				hashthreads.put(newworkingserver.hashedkey, connection);
-				hashservers.put(newworkingserver.hashedkey, kvserver);
-
-				connection.start();
-				connection.receiveData();
+					logger.info("The server with ip:"+newworkingserver.ip + " and port:"+newworkingserver.port + "is picked as a new node");
+					
+					//Recalculate and update the meta­data of the storage service
+					newworkingserver.hashedkey = conHashing.getHashedKey(newworkingserver.ip, Integer.parseInt(newworkingserver.port));
+					workingservers.add(newworkingserver);
+					idleservers.remove(newworkingserver);
+		
+					Server successor = metadata.putServer(newworkingserver);
+		
+					try {
+						Socket kvserver;
+						while((kvserver = ecsServer.accept()) != null){
+							if(kvserver.getInetAddress().equals("/" + newworkingserver.ip) && kvserver.getPort() == Integer.parseInt(newworkingserver.port)){
+								ServerConnection connection = new ServerConnection(kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
+								hashthreads.put(newworkingserver.hashedkey, connection);
+								hashservers.put(newworkingserver.hashedkey, kvserver);
 				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				logger.error(e.getMessage());
-			}
-
-			ServerConnection suserver = hashthreads.get(successor.hashedkey);
-			
-			suserver.setWriteLock();
-			suserver.moveData(newworkingserver.from, newworkingserver.to, newworkingserver.ip);
-									
-			KVAdminMessage moveFinished = new KVAdminMessage(suserver.getInput());
-			moveFinished = moveFinished.deserialize(moveFinished.getMsg());
-			if(moveFinished.getStatusType() == StatusType.MOVEFINISH){
-				for(ServerConnection connection : hashthreads.values()){
-					connection.update(metadata);
+								connection.start();
+								connection.receiveData();
+							}
+						}
+						
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						logger.error(e.getMessage());
+					}
+		
+					ServerConnection suserver = hashthreads.get(successor.hashedkey);
+					
+					suserver.setWriteLock();
+					suserver.moveData(newworkingserver.from, newworkingserver.to, newworkingserver.ip);
+											
+					KVAdminMessage moveFinished = new KVAdminMessage(suserver.getInput());
+					moveFinished = moveFinished.deserialize(moveFinished.getMsg());
+					if(moveFinished.getStatusType() == StatusType.MOVEFINISH){
+						for(ServerConnection connection : hashthreads.values()){
+							connection.update(metadata);
+						}
+					}
+		
+					suserver.releaseWriteLock();
 				}
 			}
-
-			suserver.releaseWriteLock();
-		}
+		}.start();
 	}
 
 	/* Remove a node from the storage service at an arbitrary position. 
 	 */
 	public void removeNode(){
 		
+		new Thread(){
+			public void run(){
+				Random random = new Random();
+				if(workingservers.size() == 1){
+					shutDown();
+				}
+				int removeInt = random.nextInt(workingservers.size());
+				Server toRemove = workingservers.get(removeInt);
+				Server successor = metadata.remove(toRemove);
+
+				hashthreads.get(toRemove.hashedkey).setWriteLock();
+				hashthreads.get(successor.hashedkey).update(metadata);
+
+				hashthreads.get(successor.hashedkey).receiveData();
+				hashthreads.get(toRemove.hashedkey).moveData(toRemove.from, toRemove.to, successor.ip);
+				
+				KVAdminMessage moveFinished = new KVAdminMessage(hashthreads.get(toRemove.hashedkey).getInput());
+				moveFinished = moveFinished.deserialize(moveFinished.getMsg());
+				if(moveFinished.getStatusType() == StatusType.MOVEFINISH){
+					for(ServerConnection connection : hashthreads.values()){
+						connection.update(metadata);
+					}
+				}
+	
+				hashthreads.get(toRemove.hashedkey).shutDown();
+				
+			}
+		}.start();
 		
 	}
 	
-	public static void main(String [] args){
+//	public static void main(String [] args){
+//		try {
+//			
+//			new LogSetup("logs/ecs.log", Level.ALL);
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//
+//		final ECS ecs = new ECS();
+//		new Thread(){
+//			public void run(){
+//				ecs.startEcs(40000, 2, 10, "FIFO");
+//			}
+//		}.start();
+//	}
+
+	public void startEcs(final int port, final int numberOfNodes, final int cacheSize, final String displacementStrategy){
+
 		try {
-			
 			new LogSetup("logs/ecs.log", Level.ALL);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-		final ECS ecs = new ECS();
+		
 		new Thread(){
 			public void run(){
-				ecs.startEcs(40000, 2, 10, "FIFO");
-			}
-		}.start();
-	}
-
-	public void startEcs(int port, int numberOfNodes, int cacheSize, String displacementStrategy){
-		try {
-			
-			initService(numberOfNodes, cacheSize, displacementStrategy);
-			
-			ecsServer = new ServerSocket(port);
-			Socket kvserver = null;
-
-			int currentNode = 0;
-			while(currentNode != numberOfNodes && (kvserver = ecsServer.accept()) != null){
-				logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");
-
-				byte [] b = new byte[64];
-				KVAdminMessage msg = new KVAdminMessage();
-				kvserver.getInputStream().read(b);
-				msg = msg.deserialize(new String(b, "UTF-8"));
-				int receivedport = msg.getPort();
-
-				
-				for(Server server : workingservers){
+	
+				try {
 					
-					if( receivedport == Integer.parseInt(server.port) && 
-							kvserver.getInetAddress().toString().equals("/" + server.ip)){
-						hashservers.put(server.hashedkey, kvserver);						
+					initService(numberOfNodes, cacheSize, displacementStrategy);
+					
+					ecsServer = new ServerSocket(port);
+					Socket kvserver = null;
+		
+					int currentNode = 0;
+					while(currentNode != numberOfNodes && (kvserver = ecsServer.accept()) != null){
+						logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");
+		
+						byte [] b = new byte[64];
+						KVAdminMessage msg = new KVAdminMessage();
+						kvserver.getInputStream().read(b);
+						msg = msg.deserialize(new String(b, "UTF-8"));
+						int receivedport = msg.getPort();
+		
 						
-						ServerConnection connection = new ServerConnection (this, kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
-						hashthreads.put(server.hashedkey, connection);
-						connection.start();
-						currentNode++;
-
-						break;
+						for(Server server : workingservers){
+							
+							if( receivedport == Integer.parseInt(server.port) && 
+									kvserver.getInetAddress().toString().equals("/" + server.ip)){
+								hashservers.put(server.hashedkey, kvserver);						
+	
+								ServerConnection connection = new ServerConnection (kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
+								hashthreads.put(server.hashedkey, connection);
+								connection.start();
+								currentNode++;
+		
+								break;
+							}
+						}
 					}
+		
+					while(running);
+				
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					logger.error(e.getMessage());
 				}
 			}
-//			addNode(3, "FIFO");
-
-			while(running);
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			logger.error(e.getMessage());
-		}
+		}.start();
 	}
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Random;
 
 import ecs.ConsistentHashing;
+import ecs.ECS;
 import ecs.Server;
 
 public class Metadata {
@@ -95,11 +96,36 @@ public class Metadata {
 		
 		return null;
 	}
-	
-	// randomly remove a server
-	public Server remove(){
-		Random random = new Random();
-		return servers.remove(random.nextInt(servers.size()));
+		
+	public Server remove(Server toRemove){
+		
+		if(servers.size() == 1){
+			servers.remove(toRemove);
+			return null;
+		}
+
+		if(servers.size() == 2){
+			servers.remove(toRemove);
+			servers.get(0).from = ECS.start;
+			servers.get(0).to = ECS.end;
+
+			return servers.get(0);
+		}
+		
+		for(int i = 0; i < servers.size(); i++){
+			if(servers.get(i) == toRemove){
+				if(i == servers.size() - 1){
+					servers.get(0).from = toRemove.from;
+					return servers.get(0);
+				}
+				else{
+					servers.get(i+1).from = toRemove.from;
+					return servers.get(i+1);
+				}
+			}
+		}
+		servers.remove(toRemove);
+		return null;
 	}
 	
 	@Override

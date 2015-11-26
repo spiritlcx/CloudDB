@@ -22,9 +22,7 @@ public class ServerConnection extends Thread{
 	private String displacementStrategy;
 	private Metadata metadata;
 	private Logger logger;
-	private ECS ecs;
-	public ServerConnection(ECS ecs, InputStream input,OutputStream output,int cacheSize, String displacementStrategy, Metadata metadata, Logger logger){
-		this.ecs = ecs;
+	public ServerConnection(final InputStream input,final OutputStream output, final int cacheSize, final String displacementStrategy, final Metadata metadata, final Logger logger){
 		this.input = input;
 		this.output = output;
 		this.cacheSize = cacheSize;
@@ -42,14 +40,8 @@ public class ServerConnection extends Thread{
 		initMessage.setMetadata(metadata);
 		initMessage.setStatusType(StatusType.INIT);
 
-		KVAdminMessage startMessage = new KVAdminMessage();
-		startMessage.setStatusType(StatusType.START);
-
 		try {
 			messageHandler.sendMessage(initMessage.serialize().getMsg());
-
-			messageHandler.sendMessage(startMessage.serialize().getMsg());
-			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -57,11 +49,11 @@ public class ServerConnection extends Thread{
 	}
 	
 	public void startServer(){
-		KVAdminMessage writeLock = new KVAdminMessage();
-		writeLock.setStatusType(KVAdminMessage.StatusType.STOP);
+		KVAdminMessage startMessage = new KVAdminMessage();
+		startMessage.setStatusType(StatusType.START);
 
 		try {
-			messageHandler.sendMessage(writeLock.getMsg());
+			messageHandler.sendMessage(startMessage.serialize().getMsg());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -69,11 +61,11 @@ public class ServerConnection extends Thread{
 	}
 	
 	public void stopServer(){
-		KVAdminMessage writeLock = new KVAdminMessage();
-		writeLock.setStatusType(KVAdminMessage.StatusType.STOP);
+		KVAdminMessage stopMessage = new KVAdminMessage();
+		stopMessage.setStatusType(KVAdminMessage.StatusType.STOP);
 
 		try {
-			messageHandler.sendMessage(writeLock.getMsg());
+			messageHandler.sendMessage(stopMessage.serialize().getMsg());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -81,11 +73,11 @@ public class ServerConnection extends Thread{
 	}
 
 	public void shutDown(){
-		KVAdminMessage writeLock = new KVAdminMessage();
-		writeLock.setStatusType(KVAdminMessage.StatusType.SHUTDOWN);
+		KVAdminMessage shutDownMessage = new KVAdminMessage();
+		shutDownMessage.setStatusType(KVAdminMessage.StatusType.SHUTDOWN);
 
 		try {
-			messageHandler.sendMessage(writeLock.getMsg());
+			messageHandler.sendMessage(shutDownMessage.serialize().getMsg());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -94,11 +86,11 @@ public class ServerConnection extends Thread{
 		
 	
 	public void setWriteLock(){
-		KVAdminMessage writeLock = new KVAdminMessage();
-		writeLock.setStatusType(KVAdminMessage.StatusType.WRITELOCK);
+		KVAdminMessage writeLockMessage = new KVAdminMessage();
+		writeLockMessage.setStatusType(KVAdminMessage.StatusType.WRITELOCK);
 
 		try {
-			messageHandler.sendMessage(writeLock.serialize().getMsg());
+			messageHandler.sendMessage(writeLockMessage.serialize().getMsg());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -106,11 +98,11 @@ public class ServerConnection extends Thread{
 	}
 	
 	public void releaseWriteLock(){
-		KVAdminMessage writeLock = new KVAdminMessage();
-		writeLock.setStatusType(KVAdminMessage.StatusType.WRITELOCK);
+		KVAdminMessage writeLockMessage = new KVAdminMessage();
+		writeLockMessage.setStatusType(KVAdminMessage.StatusType.WRITELOCK);
 
 		try {
-			messageHandler.sendMessage(writeLock.serialize().getMsg());
+			messageHandler.sendMessage(writeLockMessage.serialize().getMsg());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -119,11 +111,11 @@ public class ServerConnection extends Thread{
 	}
 	
 	public void receiveData(){
-		KVAdminMessage receive = new KVAdminMessage();
-		receive.setStatusType(KVAdminMessage.StatusType.RECEIVE);
+		KVAdminMessage receiveMessage = new KVAdminMessage();
+		receiveMessage.setStatusType(KVAdminMessage.StatusType.RECEIVE);
 
 		try {
-			messageHandler.sendMessage(receive.serialize().getMsg());
+			messageHandler.sendMessage(receiveMessage.serialize().getMsg());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -151,11 +143,11 @@ public class ServerConnection extends Thread{
 	}
 	
 	public void update(Metadata metadata){
-		KVAdminMessage metadataMessage = new KVAdminMessage();
-		metadataMessage.setStatusType(StatusType.UPDATE);
-		metadataMessage.setMetadata(metadata);
+		KVAdminMessage updateMessage = new KVAdminMessage();
+		updateMessage.setStatusType(StatusType.UPDATE);
+		updateMessage.setMetadata(metadata);
 		try {
-			messageHandler.sendMessage(metadataMessage.serialize().getMsg());
+			messageHandler.sendMessage(updateMessage.serialize().getMsg());
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

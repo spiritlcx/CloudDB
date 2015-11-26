@@ -25,4 +25,8 @@ public class Server implements Comparator<Server>{
 		// TODO Auto-generated method stub
 		return o1.hashedkey.compareTo(o2.hashedkey);
 	}	
+	@Override
+	public String toString(){
+		return "server:{"+ip +","+ port+"," + from+"," + to+"}";
+	}
 }

@@ -9,8 +9,6 @@ import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import app_KvClient.KVClient;
-
 import common.messages.TextMessage;
 import ecs.ECS;
 
@@ -22,8 +20,8 @@ public class ECSClient {
 	private boolean stop = false;
 	
 	public void run() {
+		stdin = new BufferedReader(new InputStreamReader(System.in));
 		while(!stop) {
-			stdin = new BufferedReader(new InputStreamReader(System.in));
 			System.out.print(PROMPT);
 			
 			try {
@@ -60,15 +58,10 @@ public class ECSClient {
 				if(ecs != null){
 					try {
 						if(tokens[3].equals("FIFO") || tokens[3].equals("LRU") || tokens[3].equals("LFU")){
-							final int port = Integer.parseInt(tokens[1]);
-							final int numberOfNodes = Integer.parseInt(tokens[2]);
-							final String strategy = tokens[3];
-							new Thread(){
-								public void run(){
-									ecs.startEcs(40000, port, numberOfNodes, strategy);
-
-								}
-							}.start();
+							int port = Integer.parseInt(tokens[1]);
+							int numberOfNodes = Integer.parseInt(tokens[2]);
+							String strategy = tokens[3];
+							ecs.startEcs(40000, port, numberOfNodes, strategy);
 						}
 						else
 						{

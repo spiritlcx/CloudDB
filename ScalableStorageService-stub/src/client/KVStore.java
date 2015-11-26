@@ -51,7 +51,6 @@ public class KVStore extends Thread implements KVCommInterface {
 		
 		listeners = new HashSet<ClientSocketListener>();
 		setRunning(true);
-		logger.info("Connection established");
 
 	}
 	
@@ -104,6 +103,8 @@ public class KVStore extends Thread implements KVCommInterface {
 			messageHandler = new MessageHandler(input, output, logger);
 			
 			run();
+			logger.info("Connection established");
+
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			logger.error(e.getMessage());

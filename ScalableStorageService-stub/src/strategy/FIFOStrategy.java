@@ -19,7 +19,9 @@ public class FIFOStrategy implements Strategy {
 	 */
 	@Override
 	public String get() {
-		return lists.get(0);
+		if(lists.size() > 0)
+			return lists.get(0);
+		return null;
 	}
 
 	/**

@@ -78,7 +78,7 @@ public class ClientConnection implements Runnable {
 					+ clientSocket.getLocalAddress() + " / "
 					+ clientSocket.getLocalPort()));
 			
-			while(isOpen && !KVServer.lock) {
+			while(isOpen) {
 				try {
 					TextMessage latestMsg = receiveMessage();
 
@@ -86,7 +86,8 @@ public class ClientConnection implements Runnable {
 
 					if(receivedMessage != null){
 						try{
-							action(receivedMessage);
+							if(KVServer.running.get() == true)
+								action(receivedMessage);
 						}catch(Exception e){
 							logger.error(e.getMessage());
 						}
@@ -211,138 +212,141 @@ public class ClientConnection implements Runnable {
 	 * storage simultaneously.
 	 * @param receivedMessage The message received from the client
 	 */
-	private synchronized void action(TextMessage receivedMessage){
-		TextMessage sentMessage = new TextMessage();
+	private void action(TextMessage receivedMessage){
 		switch(receivedMessage.getStatus()){
 		case PUT:
-			if(receivedMessage.getKey() == null){
-				logger.error("No valid key value pair.");
+			if(KVServer.lock)
 				return;
-			}
-			
-			String[] server = metadata.getServer(receivedMessage.getKey());
-						
-			if(server != null && (server[0]).equals("127.0.0.1") && server[1].equals("" + serverSocket.getLocalPort())){
-				if(receivedMessage.getValue().equals("null")){
-					if(keyvalue.get(receivedMessage.getKey()) != null){
-						sentMessage.setValue(keyvalue.get(receivedMessage.getKey()));
-						synchronized(keyvalue){
-							keyvalue.remove(receivedMessage.getKey());
-						}
-						synchronized(strategy){
-							strategy.remove(receivedMessage.getKey());
-						}
-						String keyToLoad = null;
-						if((keyToLoad = persistance.read()) != null){
-							String valueToLoad = persistance.lookup(keyToLoad);
-							synchronized(keyvalue){
-								keyvalue.put(keyToLoad, valueToLoad);
-							}
-							persistance.remove(keyToLoad);
-							synchronized(strategy){
-								strategy.add(keyToLoad);
-							}
-						}
+			put(receivedMessage);
+			break;
+		case GET:
+			get(receivedMessage);
+			break;
+		default:
+			logger.error("No valid status.");
+			break;
+		}
+	}
+	
+	private void put(TextMessage receivedMessage){
+		TextMessage sentMessage = new TextMessage();
+
+		if(receivedMessage.getKey() == null){
+			logger.error("No valid key value pair.");
+			return;
+		}
+		
+		String[] server = metadata.getServer(receivedMessage.getKey());
 					
+		if(server != null && (server[0]).equals("127.0.0.1") && server[1].equals("" + serverSocket.getLocalPort())){
+			if(receivedMessage.getValue().equals("null")){
+				if(keyvalue.get(receivedMessage.getKey()) != null){
+					sentMessage.setValue(keyvalue.get(receivedMessage.getKey()));
+					synchronized(keyvalue){
+						keyvalue.remove(receivedMessage.getKey());
+					}
+					synchronized(strategy){
+						strategy.remove(receivedMessage.getKey());
+					}
+					String keyToLoad = null;
+					if((keyToLoad = persistance.read()) != null){
+						String valueToLoad = persistance.lookup(keyToLoad);
+						synchronized(keyvalue){
+							keyvalue.put(keyToLoad, valueToLoad);
+						}
+						persistance.remove(keyToLoad);
+						synchronized(strategy){
+							strategy.add(keyToLoad);
+						}
+					}
+				
+					sentMessage.setStatusType(StatusType.DELETE_SUCCESS);
+				} 
+				else if(persistance.lookup(receivedMessage.getKey()) != null){
+					String removeMessage = persistance.remove(receivedMessage.getKey());
+					logger.info(removeMessage);
+					if(removeMessage.contains("succesfully")){
 						sentMessage.setStatusType(StatusType.DELETE_SUCCESS);
-					} 
-					else if(persistance.lookup(receivedMessage.getKey()) != null){
-						String removeMessage = persistance.remove(receivedMessage.getKey());
-						logger.info(removeMessage);
-						if(removeMessage.contains("succesfully")){
-							sentMessage.setStatusType(StatusType.DELETE_SUCCESS);
-						}
-						else{
-							sentMessage.setStatusType(StatusType.DELETE_ERROR);
-						}
 					}
 					else{
-						sentMessage.setStatusType(StatusType.DELETE_ERROR);						
+						sentMessage.setStatusType(StatusType.DELETE_ERROR);
 					}
-			    		
-					sentMessage.setKey(receivedMessage.getKey());
-					
-					try {
-						sendMessage(sentMessage.serialize());
-					} catch (IOException e) {
-						logger.error("Unable to send response!", e);
-					}
-					return;
 				}
 				else{
+					sentMessage.setStatusType(StatusType.DELETE_ERROR);						
+				}
+		    		
+				sentMessage.setKey(receivedMessage.getKey());
 				
-					if(keyvalue.get(receivedMessage.getKey()) != null){
-						synchronized(keyvalue){
-							keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
-						}
-						synchronized(strategy){
-							strategy.update(receivedMessage.getKey());
-						}
-						sentMessage.setStatusType(StatusType.PUT_UPDATE);
-					}else{
-						if(persistance.lookup(receivedMessage.getKey()) != null){
-							String removeMessage = persistance.remove(receivedMessage.getKey());
-							logger.info(removeMessage);
-						
-							//remove a key in keyvalue and put the new key						
-							if(removeMessage.contains("succesfully")){
-								String key = strategy.get();
+				try {
+					sendMessage(sentMessage.serialize());
+				} catch (IOException e) {
+					logger.error("Unable to send response!", e);
+				}
+				return;
+			}
+			else{
+			
+				if(keyvalue.get(receivedMessage.getKey()) != null){
+					synchronized(keyvalue){
+						keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
+					}
+					synchronized(strategy){
+						strategy.update(receivedMessage.getKey());
+					}
+					sentMessage.setStatusType(StatusType.PUT_UPDATE);
+				}else{
+					if(persistance.lookup(receivedMessage.getKey()) != null){
+						String removeMessage = persistance.remove(receivedMessage.getKey());
+						logger.info(removeMessage);
+					
+						//remove a key in keyvalue and put the new key						
+						if(removeMessage.contains("succesfully")){
+							String key = strategy.get();
+							if(key != null){
 								String value = keyvalue.get(key);
 								persistance.store(key, value);
 								synchronized(strategy){
 									strategy.remove(key);
 								}
 								keyvalue.remove(key);
-
-								keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
-								sentMessage.setStatusType(StatusType.PUT_UPDATE);
-
 							}
-							else{
-								sentMessage.setStatusType(StatusType.PUT_ERROR);
+
+							keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
+							sentMessage.setStatusType(StatusType.PUT_UPDATE);
+
+						}
+						else{
+							sentMessage.setStatusType(StatusType.PUT_ERROR);
+						}
+					}else{
+						if(keyvalue.size() == cacheSize){
+							String key = strategy.get();
+							String value = keyvalue.get(key);
+							persistance.store(key, value);
+							synchronized(keyvalue){
+								keyvalue.remove(key);
+								keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
+							}
+							synchronized(strategy){
+								strategy.remove(key);
+								strategy.add(receivedMessage.getKey());
 							}
 						}else{
-							if(keyvalue.size() == cacheSize){
-								String key = strategy.get();
-								String value = keyvalue.get(key);
-								persistance.store(key, value);
-								synchronized(keyvalue){
-									keyvalue.remove(key);
-									keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
-								}
-								synchronized(strategy){
-									strategy.remove(key);
-									strategy.add(receivedMessage.getKey());
-								}
-							}else{
-								synchronized(keyvalue){
-									keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
-								}
-								synchronized(strategy){
-									strategy.add(receivedMessage.getKey());
-								}
-
+							synchronized(keyvalue){
+								keyvalue.put(receivedMessage.getKey(), receivedMessage.getValue());
 							}
-							sentMessage.setStatusType(StatusType.PUT_SUCCESS);
+							synchronized(strategy){
+								strategy.add(receivedMessage.getKey());
+							}
+
 						}
-					}
-		 	
-					sentMessage.setKey(receivedMessage.getKey());
-					sentMessage.setValue(receivedMessage.getValue());
-					try {
-						sendMessage(sentMessage.serialize());
-					} 
-					catch (IOException e) {
-						logger.error("Unable to send response!", e);
+						sentMessage.setStatusType(StatusType.PUT_SUCCESS);
 					}
 				}
-			}
-			else{
-				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
+	 	
 				sentMessage.setKey(receivedMessage.getKey());
 				sentMessage.setValue(receivedMessage.getValue());
-				sentMessage.setMetadata(metadata);
-
 				try {
 					sendMessage(sentMessage.serialize());
 				} 
@@ -350,66 +354,81 @@ public class ClientConnection implements Runnable {
 					logger.error("Unable to send response!", e);
 				}
 			}
-			break;
-		case GET:
-			if(receivedMessage.getKey() == null){
-				logger.error("not valid key");
-				return;
+		}
+		else{
+			sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
+			sentMessage.setKey(receivedMessage.getKey());
+			sentMessage.setValue(receivedMessage.getValue());
+			sentMessage.setMetadata(metadata);
+
+			try {
+				sendMessage(sentMessage.serialize());
+			} 
+			catch (IOException e) {
+				logger.error("Unable to send response!", e);
 			}
-			
-			server = metadata.getServer(receivedMessage.getKey());
-			
-			if(server != null && server[0].equals("127.0.0.1") && server[1].equals("" + clientSocket.getLocalPort())){
-				String value = null;
-				if(keyvalue.get(receivedMessage.getKey()) != null){
-					value = keyvalue.get(receivedMessage.getKey());
-				} else {
-					value = persistance.lookup(receivedMessage.getKey());
-					if(value != null){
-						persistance.remove(receivedMessage.getKey());
-						String keyToRemove = strategy.get();
+		}
+
+	}
+	private void get(TextMessage receivedMessage){
+		TextMessage sentMessage = new TextMessage();
+
+		if(receivedMessage.getKey() == null){
+			logger.error("not valid key");
+			return;
+		}
+		
+		String [] server = metadata.getServer(receivedMessage.getKey());
+		
+		if(server != null && server[0].equals("127.0.0.1") && server[1].equals("" + clientSocket.getLocalPort())){
+			String value = null;
+			if(keyvalue.get(receivedMessage.getKey()) != null){
+				value = keyvalue.get(receivedMessage.getKey());
+			} else {
+				value = persistance.lookup(receivedMessage.getKey());
+				if(value != null){
+					persistance.remove(receivedMessage.getKey());
+					String keyToRemove = strategy.get();
+					if(keyToRemove != null){
 						String valueToRemove = keyvalue.get(keyToRemove);
 						persistance.store(keyToRemove, valueToRemove);
 						synchronized(keyvalue){
 							keyvalue.remove(keyToRemove);
-							keyvalue.put(receivedMessage.getKey(), value);
-						}
+							}
 						synchronized(strategy){
 							strategy.remove(keyToRemove);
-							strategy.add(receivedMessage.getKey());
 						}
 					}
-				}
-				if(value != null){
-					sentMessage.setStatusType(StatusType.GET_SUCCESS);
-					sentMessage.setKey(receivedMessage.getKey());
-					sentMessage.setValue(value);
-				} else {
-					sentMessage.setStatusType(StatusType.GET_ERROR);
-					sentMessage.setKey(receivedMessage.getKey());				
-				}
-				try {
-					sendMessage(sentMessage.serialize());
-				} catch (IOException e) {
-					logger.error("Error while getting value!", e);
+					keyvalue.put(receivedMessage.getKey(), value);
+					strategy.add(receivedMessage.getKey());
 				}
 			}
-			else{
-				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
+			if(value != null){
+				sentMessage.setStatusType(StatusType.GET_SUCCESS);
 				sentMessage.setKey(receivedMessage.getKey());
-				sentMessage.setMetadata(metadata);
-				
-				try {
-					sendMessage(sentMessage.serialize());
-				} 
-				catch (IOException e) {
-					logger.error("Unable to send response!", e);
-				}
+				sentMessage.setValue(value);
+			} else {
+				sentMessage.setStatusType(StatusType.GET_ERROR);
+				sentMessage.setKey(receivedMessage.getKey());				
 			}
-			break;
-		default:
-			logger.error("No valid status.");
-			break;
+			try {
+				sendMessage(sentMessage.serialize());
+			} catch (IOException e) {
+				logger.error("Error while getting value!", e);
+			}
 		}
+		else{
+			sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
+			sentMessage.setKey(receivedMessage.getKey());
+			sentMessage.setMetadata(metadata);
+			
+			try {
+				sendMessage(sentMessage.serialize());
+			} 
+			catch (IOException e) {
+				logger.error("Unable to send response!", e);
+			}
+		}
+
 	}
 }

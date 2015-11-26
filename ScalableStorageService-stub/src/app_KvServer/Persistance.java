@@ -15,9 +15,9 @@ public class Persistance {
 	private File file;
 	private BufferedReader reader;
 	private BufferedWriter writer;
-	public Persistance(){
+	public Persistance(String ip, int port){
 		try {
-			file = new File("persisteddata");
+			file = new File("persisteddata"+ip+port);
 			file.createNewFile();
 		} catch (IOException e) {
 			Logger.getRootLogger().error("Persistance error.", e);

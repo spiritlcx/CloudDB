@@ -10,6 +10,7 @@ import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -42,7 +43,7 @@ public class KVServer{
 	private OutputStream output;
 	private MessageHandler messageHandler;
 	
-    private boolean running;
+    public static AtomicBoolean running = new AtomicBoolean(false);
     private boolean shutdown;
     public static boolean lock;
     private HashMap<String, String> keyvalue;
@@ -60,9 +61,8 @@ public class KVServer{
 	 */
 	public KVServer() {
 		shutdown = false;
-		running = false;
+		running.set(false);
 		keyvalue = new HashMap<String, String>();
-		this.persistance = new Persistance();
 	}
     /**
      * Initializes and starts the server. 
@@ -70,7 +70,12 @@ public class KVServer{
      */
     public void run() {
 
-    	initializeServer();
+    	try {
+			initializeServer();
+		} catch (Exception e2) {
+			// TODO Auto-generated catch block
+			return;
+		}
     	
 		Thread messageReceiver= new Thread(){
 			public void run(){
@@ -78,20 +83,24 @@ public class KVServer{
 			}
 		};
 		messageReceiver.start();
-		try {
-			messageReceiver.join(1000);
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		};
 
         if(serverSocket != null) {
 	        while(!shutdown){
-	        	if(running){
+				try {
+					synchronized(running){
+						while(!running.get())
+							running.wait();
+					}
+					
+				}catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+	        	
 		            try {
 		            	System.out.println("running");
 
-		                Socket client = serverSocket.accept();  
+		                Socket client = serverSocket.accept();
 		                ClientConnection connection = 
 		                		new ClientConnection(client, serverSocket, keyvalue, cacheSize, strategy, persistance, metadata);
 		               (new Thread(connection)).start();
@@ -103,7 +112,6 @@ public class KVServer{
 		            	logger.error("Error! " +
 		            			"Unable to establish connection. \n", e);
 		            }
-	        	}
 	        }
 	        System.out.println("not running");
         }
@@ -114,7 +122,7 @@ public class KVServer{
      * Stops the server insofar that it won't listen at the given port any more.
      */
     public void stopServer(){
-        running = false;
+        running.set(false);
         try {
 			serverSocket.close();
 		} catch (IOException e) {
@@ -190,7 +198,7 @@ public class KVServer{
 		}
 	}
     
-    private void initializeServer() {
+    private void initializeServer() throws Exception {
     	logger.info("Initialize server ...");
     	
     	try {
@@ -200,20 +208,20 @@ public class KVServer{
 
 			messageHandler = new MessageHandler(input, output, logger);
 			
-			port = 50006;
+			port = 50005;
 
 			KVAdminMessage msg = new KVAdminMessage();
-			msg.setStatusType(StatusType.RECEIVED);			
+			msg.setStatusType(StatusType.RECEIVED);
 			msg.setPort(port);
+
+			this.persistance = new Persistance("127.0.0.1", port);
 			
 			messageHandler.sendMessage(msg.serialize().getMsg());
 						
-		} catch (UnknownHostException e1) {
+		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			logger.error(e1.getMessage());
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			logger.error(e1.getMessage());
+			logger.error(e.getMessage());
+			throw new Exception();
 		}
     	
     	try {
@@ -226,8 +234,10 @@ public class KVServer{
             if(e instanceof BindException){
             	logger.error("Port " + port + " is already bound!");
             }
+			throw new Exception();
         } catch (Exception e){
         	logger.error(e.getMessage());
+			throw new Exception();
         }
     }
     
@@ -252,7 +262,10 @@ public class KVServer{
      */
     
     public void start(){
-    	running = true;
+    	synchronized(running){
+    		running.set(true);
+    		running.notifyAll();
+    	}
     	logger.info("The server is started");
     }
 
@@ -262,7 +275,7 @@ public class KVServer{
      */
     
     public void stop(){
-    	running = false;
+    	running.set(false);
     	logger.info("The server is stopped");
     }
     
@@ -272,6 +285,13 @@ public class KVServer{
     
     public void shutDown(){
     	shutdown = true;
+    	try {
+			serverSocket.close();
+			clientSocket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     	logger.info("The server is shutdown");
     }
 
