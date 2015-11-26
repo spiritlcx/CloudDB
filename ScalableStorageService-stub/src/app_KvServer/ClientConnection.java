@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.net.ServerSocket;
 import java.util.HashMap;
 
@@ -220,8 +221,8 @@ public class ClientConnection implements Runnable {
 			}
 			
 			String[] server = metadata.getServer(receivedMessage.getKey());
-			
-			if(server != null && server[0].equals(serverSocket.getLocalSocketAddress().toString()) && server[1].equals("" + serverSocket.getLocalPort())){
+						
+			if(server != null && (server[0]).equals("127.0.0.1") && server[1].equals("" + serverSocket.getLocalPort())){
 				if(receivedMessage.getValue().equals("null")){
 					if(keyvalue.get(receivedMessage.getKey()) != null){
 						sentMessage.setValue(keyvalue.get(receivedMessage.getKey()));
@@ -341,7 +342,7 @@ public class ClientConnection implements Runnable {
 				sentMessage.setKey(receivedMessage.getKey());
 				sentMessage.setValue(receivedMessage.getValue());
 				sentMessage.setMetadata(metadata);
-				
+
 				try {
 					sendMessage(sentMessage.serialize());
 				} 
@@ -358,7 +359,7 @@ public class ClientConnection implements Runnable {
 			
 			server = metadata.getServer(receivedMessage.getKey());
 			
-			if(server != null && server[0].equals(clientSocket.getLocalSocketAddress().toString()) && server[1].equals("" + clientSocket.getLocalPort())){
+			if(server != null && server[0].equals("127.0.0.1") && server[1].equals("" + clientSocket.getLocalPort())){
 				String value = null;
 				if(keyvalue.get(receivedMessage.getKey()) != null){
 					value = keyvalue.get(receivedMessage.getKey());

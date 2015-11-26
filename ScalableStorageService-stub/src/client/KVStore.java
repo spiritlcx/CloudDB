@@ -10,7 +10,6 @@ import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 
@@ -18,7 +17,6 @@ import common.messages.TextMessage;
 import client.ClientSocketListener.SocketStatus;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
-import logger.LogSetup;
 import common.messages.MessageHandler;
 import metadata.Metadata;
 
@@ -47,12 +45,6 @@ public class KVStore extends Thread implements KVCommInterface {
 	 */
 	public KVStore(String address, int port){
 
-		try {
-			new LogSetup("logs/kvstore.log", Level.ALL);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 		
 		this.address = address;
 		this.port = port;
@@ -65,6 +57,7 @@ public class KVStore extends Thread implements KVCommInterface {
 	
 	public void run() {
 		try {
+			setRunning(true);
 			byte [] msg = messageHandler.receiveMessage();
 			TextMessage receivedMessage = new TextMessage(msg);
 			for(ClientSocketListener listener : listeners) {
@@ -79,8 +72,6 @@ public class KVStore extends Thread implements KVCommInterface {
 		setRunning(false);
 		logger.info("Tearing down the connection ...");
 		if (clientSocket != null) {
-			input.close();
-			output.close();
 			clientSocket.close();
 			clientSocket = null;
 			logger.info("Connection closed!");
@@ -112,6 +103,7 @@ public class KVStore extends Thread implements KVCommInterface {
 			input = clientSocket.getInputStream();
 			messageHandler = new MessageHandler(input, output, logger);
 			
+			run();
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			logger.error(e.getMessage());
@@ -158,7 +150,7 @@ public class KVStore extends Thread implements KVCommInterface {
 		{
 			String[] correctServer = metadata.getServer(key);
 			
-			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port)))
+			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port+"")))
 			{
 				disconnect();
 				this.address = correctServer[0];

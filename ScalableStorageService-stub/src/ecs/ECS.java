@@ -172,11 +172,9 @@ public class ECS {
 	 * displacement strategy and add it to the storage service at an 
 	 * arbitrary position. 
 	 */
-	public void addNode(int cacheSize, String displacementStrategy){
+	public void addNode(int newcacheSize, String displacementStrategy){
 		//If there are idle servers in the repository, randomly pick one of 
 		//them and send an SSH call to invoke the KVServer process.
-
-		System.out.println(idleservers.size());
 		
 		if(idleservers.size() != 0){
 			Random random = new Random();
@@ -192,7 +190,7 @@ public class ECS {
 			Socket kvserver;
 			try {
 				kvserver = ecsServer.accept();
-				ServerConnection connection = new ServerConnection(this, kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
+				ServerConnection connection = new ServerConnection(this, kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
 				hashthreads.put(newworkingserver.hashedkey, connection);
 				hashservers.put(newworkingserver.hashedkey, kvserver);
 
@@ -279,7 +277,7 @@ public class ECS {
 					}
 				}
 			}
-			addNode(3, "FIFO");
+//			addNode(3, "FIFO");
 
 			while(running);
 			

@@ -2,6 +2,7 @@ package common.messages;
 
 import java.io.UnsupportedEncodingException;
 
+import ecs.Server;
 import metadata.Metadata;
 
 
@@ -107,8 +108,24 @@ public class KVAdminMessage extends Message{
 			}else if(keyvalue[0].trim().equals("displacementStrategy")){
 				demessage.setDisplacementStrategy(keyvalue[1].trim());
 			}else if(keyvalue[0].trim().equals("metadata")){
-				Metadata metadata = new Metadata();				
+				System.out.println(keyvalue[1].trim());
+				Metadata metadata = new Metadata();
+				
+				String[] datasets = keyvalue[1].trim().split("<");
+				String[] serverset;
+					
+				System.out.println(datasets.length);
+				for(String dataset: datasets){
+					System.out.println(dataset);
+					serverset = dataset.substring(1, dataset.length()-1).split(" ");
+					
+					if(serverset.length == 4){
+						metadata.add(new Server(serverset[0], serverset[1], serverset[2], serverset[3]));
+					}
+				}
+				System.out.println("metadata" + metadata);
 				demessage.setMetadata(metadata);
+				
 			}else if(keyvalue[0].trim().equals("data")){
 				demessage.setData(keyvalue[1].trim());
 			}else if(keyvalue[0].trim().equals("from")){

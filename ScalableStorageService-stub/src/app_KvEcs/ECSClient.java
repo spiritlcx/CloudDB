@@ -60,7 +60,15 @@ public class ECSClient {
 				if(ecs != null){
 					try {
 						if(tokens[3].equals("FIFO") || tokens[3].equals("LRU") || tokens[3].equals("LFU")){
-							ecs.startEcs(40000, Integer.parseInt(tokens[1]), Integer.parseInt(tokens[2]), tokens[3]);
+							final int port = Integer.parseInt(tokens[1]);
+							final int numberOfNodes = Integer.parseInt(tokens[2]);
+							final String strategy = tokens[3];
+							new Thread(){
+								public void run(){
+									ecs.startEcs(40000, port, numberOfNodes, strategy);
+
+								}
+							}.start();
 						}
 						else
 						{

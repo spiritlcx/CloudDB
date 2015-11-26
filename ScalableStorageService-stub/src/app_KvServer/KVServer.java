@@ -70,23 +70,23 @@ public class KVServer{
      */
     public void run() {
 
-    	Thread t = new Thread(){
-    		public void run(){
-    			initializeServer();
-    		}
-    	};
+    	initializeServer();
     	
-    	t.start();
-    	try {
-			t.join();
+		Thread messageReceiver= new Thread(){
+			public void run(){
+				communicateECS();
+			}
+		};
+		messageReceiver.start();
+		try {
+			messageReceiver.join(1000);
 		} catch (InterruptedException e1) {
 			// TODO Auto-generated catch block
-			logger.error(e1.getMessage());
-		}
-    	
+			e1.printStackTrace();
+		};
+
         if(serverSocket != null) {
 	        while(!shutdown){
-            	System.out.println("not running");
 	        	if(running){
 		            try {
 		            	System.out.println("running");
@@ -105,6 +105,7 @@ public class KVServer{
 		            }
 	        	}
 	        }
+	        System.out.println("not running");
         }
         logger.info("Server stopped.");
     }
@@ -142,6 +143,7 @@ public class KVServer{
 					Metadata meta = message.getMetadata();
 					int size = message.getCacheSize();
 					String stra = message.getDisplacementStrategy();
+
 					initKVServer(meta, size, stra);
 
 					break;
@@ -182,7 +184,7 @@ public class KVServer{
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				logger.error(e);
-				shutdown = true;
+//				shutdown = true;
 				return;
 			}
 		}
@@ -198,20 +200,14 @@ public class KVServer{
 
 			messageHandler = new MessageHandler(input, output, logger);
 			
-			port = 50004;
+			port = 50006;
 
 			KVAdminMessage msg = new KVAdminMessage();
 			msg.setStatusType(StatusType.RECEIVED);			
 			msg.setPort(port);
 			
 			messageHandler.sendMessage(msg.serialize().getMsg());
-			
-			new Thread(){
-				public void run(){
-					communicateECS();
-				}
-			}.start();
-			
+						
 		} catch (UnknownHostException e1) {
 			// TODO Auto-generated catch block
 			logger.error(e1.getMessage());

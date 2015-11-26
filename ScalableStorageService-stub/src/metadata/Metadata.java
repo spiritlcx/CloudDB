@@ -1,6 +1,5 @@
 package metadata;
 
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,21 +16,17 @@ public class Metadata {
 
 	public Server putServer(Server server){
 		if(servers.size() == 1){
-			if(server.hashedkey.compareTo(servers.get(0).hashedkey) < 0){
-				server.from = servers.get(0).hashedkey;
-				servers.get(0).from = server.to;
-				servers.get(0).to = servers.get(0).hashedkey;
-				server.to = server.hashedkey;
+			server.from = servers.get(0).hashedkey;
+			server.to = server.hashedkey;
 
+			servers.get(0).from = server.hashedkey;
+			servers.get(0).to = servers.get(0).hashedkey;
+
+			if(server.hashedkey.compareTo(servers.get(0).hashedkey) < 0){
 				servers.add(0, server);
 				return servers.get(1);
 
 			}else{
-				servers.get(0).from = server.hashedkey;
-				server.from = servers.get(0).to;
-				servers.get(0).to = servers.get(0).hashedkey;
-				server.to = server.hashedkey;
-
 				servers.add(1, server);
 				return servers.get(0);
 			}
@@ -72,13 +67,22 @@ public class Metadata {
 	 */
 	public String[] getServer(String key)
 	{
+		if(servers.size() == 1)
+			return new String [] {servers.get(0).ip, servers.get(0).port};
 		ConsistentHashing conHashing;
 		try {
 			conHashing = new ConsistentHashing();
 			String hashedkey = conHashing.getHashedKey(key);
 
-			for(Server server: servers)
+			for(int i = 0; i < servers.size(); i++)
 			{
+				Server server = servers.get(i);
+				
+				if(i==0){
+					if(hashedkey.compareTo(server.from) > 0 || hashedkey.compareTo(server.to) < 0)
+						return new String [] {server.ip, server.port};
+				}
+				
 				if(hashedkey.compareTo(server.from) >= 0 && hashedkey.compareTo(server.to) <= 0){
 					return new String[]{server.ip, server.port};
 				}
@@ -101,11 +105,9 @@ public class Metadata {
 	@Override
 	public String toString(){
 		String result = "";
-		int count = 0;
 		for(Server server : servers){
-			result += "{"+server.ip + "," + server.port + "," + server.from + "," + server.to+"}";
-			if(++count < servers.size())
-				result += ",";
+			result += "{"+server.ip + " " + server.port + " " + server.from + " " + server.to+"}";
+			result += "<";
 		}
 		return result;
 	}

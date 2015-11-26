@@ -177,11 +177,11 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 				Metadata tempdata = new Metadata();
 				
 				if(keyvalue.length > 1){
-					String[] datasets = keyvalue[1].split(",");
+					String[] datasets = keyvalue[1].split("<");
 					String[] serverset;
 					
 					for(String dataset: datasets){
-						serverset = dataset.substring(1, msg.length()-1).split(",");
+						serverset = dataset.substring(1, dataset.length()-1).split(" ");
 						
 						if(serverset.length == 4)
 						{
