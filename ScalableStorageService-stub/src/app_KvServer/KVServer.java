@@ -455,14 +455,10 @@ public class KVServer{
      */
     public static void main(String[] args) {
     	try {
-			new LogSetup("logs/server.log", Level.ALL);
+
 			KVServer kvserver = new KVServer();
 			kvserver.run(50004);
-		} catch (IOException e) {
-			System.out.println("Error! Unable to initialize logger!");
-			e.printStackTrace();
-			System.exit(1);
-		} catch (NumberFormatException nfe) {
+		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
 			System.exit(1);

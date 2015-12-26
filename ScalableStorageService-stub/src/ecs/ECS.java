@@ -41,6 +41,7 @@ public class ECS {
 		try {
 			running = true;
 			conHashing = new ConsistentHashing();
+
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -305,14 +306,6 @@ public class ECS {
 	}
 	
 	public void startEcs(final int port, final int numberOfNodes, final int cacheSize, final String displacementStrategy){
-
-		try {
-			new LogSetup("logs/ecs.log", Level.ALL);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
 		
 		new Thread(){
 			public void run(){

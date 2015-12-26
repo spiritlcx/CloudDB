@@ -246,7 +246,7 @@ public class ECSClient {
      */
     public static void main(String[] args) {
     	try {
-			new LogSetup("logs/ecs.log", Level.OFF);
+			new LogSetup("logs/ecs.log", Level.ALL);
 			ECSClient app = new ECSClient();
 			app.run();
 		} catch (IOException e) {
