@@ -19,6 +19,7 @@ import common.messages.KVAdminMessage;
 import common.messages.KVAdminMessage.StatusType;
 import common.messages.MessageHandler;
 import ecs.ConsistentHashing;
+import ecs.Server;
 import logger.LogSetup;
 import metadata.Metadata;
 import strategy.Strategy;
@@ -49,7 +50,11 @@ public class KVServer{
     private HashMap<String, String> keyvalue;
     private Persistance persistance;
     private Metadata metadata;
-	/**
+
+	private ConsistentHashing conHashing;
+
+    
+    /**
 	 * Start KV Server at given port
 	 * @param port given port for storage server to operate
 	 * @param cacheSize specifies how many key-value pairs the server is allowed 
@@ -62,7 +67,11 @@ public class KVServer{
 	public KVServer() {
 		try {
 			new LogSetup("logs/server.log", Level.ALL);
+			conHashing = new ConsistentHashing();
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -96,6 +105,8 @@ public class KVServer{
 					synchronized(running){
 						while(!running.get())
 							running.wait();
+		            	logger.info("start to serve");
+
 					}
 					
 				}catch (InterruptedException e1) {
@@ -104,7 +115,6 @@ public class KVServer{
 				}
 	        	
 		            try {
-		            	System.out.println("running");
 
 		                Socket client = serverSocket.accept();
 		                ClientConnection connection = 
@@ -270,6 +280,7 @@ public class KVServer{
     		running.set(true);
     		running.notifyAll();
     	}
+
     	logger.info("The server is started");
     }
 
@@ -329,16 +340,7 @@ public class KVServer{
 		ArrayList<String> toRemove = new ArrayList<String>();
 
     	KVAdminMessage dataMessage = new KVAdminMessage();
-		dataMessage.setStatusType(StatusType.DATA);
-		ConsistentHashing conHashing;
-		try {
-			conHashing = new ConsistentHashing();
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return null;
-		}
-		
+		dataMessage.setStatusType(StatusType.DATA);		
 
 		Socket moveSender = new Socket(ip, 30000);
 		
@@ -369,6 +371,10 @@ public class KVServer{
 			}
 		}
 
+//		synchronized(persistance){
+//			persistance.
+//		}
+		
 		dataMessage.setData(data);
 
 		senderHandler.sendMessage(dataMessage.serialize().getMsg());
@@ -450,6 +456,41 @@ public class KVServer{
     
     
     /**
+     * insert replicas to two successors
+     */
+    
+    public void inserts(String key, String value){
+
+    	Server successor = metadata.getSuccessor(conHashing.getHashedKey("127.0.0.1" + port));
+    	
+    	if(successor != null){
+    		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
+    		if(!sesuccessor.hashedkey.equals(conHashing.getHashedKey("127.0.0.1" + port))){
+    			
+    		}
+    	}
+    }
+    
+
+    /**
+     * update replicas
+     */
+    
+    public void updates(String key, String value){
+    	
+    }
+
+    
+    /**
+     * delete replicas
+     */
+    
+    public void deletes(String key, String value){
+    	
+    }
+
+    
+    /**
      * Main entry point for the echo server application. 
      * @param args contains the port number at args[0].
      */
@@ -457,7 +498,7 @@ public class KVServer{
     	try {
 
 			KVServer kvserver = new KVServer();
-			kvserver.run(50004);
+			kvserver.run(50005);
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");

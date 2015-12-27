@@ -14,12 +14,9 @@ import common.messages.KVAdminMessage.StatusType;
 
 public class ServerConnection extends Thread{
 	private MessageHandler messageHandler;
-	private InputStream input;
-	private OutputStream output;
 	private int cacheSize;
 	private String displacementStrategy;
 	private Metadata metadata;
-	private Logger logger;
 
 	/**
 	 * This class handles the connection to the server.
@@ -33,12 +30,9 @@ public class ServerConnection extends Thread{
 
 	public ServerConnection(final InputStream input,final OutputStream output, final int cacheSize, final String displacementStrategy, final Metadata metadata, final Logger logger){
 	
-		this.input = input;
-		this.output = output;
 		this.cacheSize = cacheSize;
 		this.displacementStrategy = displacementStrategy;
 		this.metadata = metadata;
-		this.logger = logger;
 		messageHandler = new MessageHandler(input, output, logger);
 	}
 	

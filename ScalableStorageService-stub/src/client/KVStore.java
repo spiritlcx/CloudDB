@@ -46,13 +46,6 @@ public class KVStore implements KVCommInterface {
 	 * @throws UnknownHostException 
 	 */
 	public KVStore(String address, int port){
-		try {
-			new LogSetup("logs/kvserver.log", Level.ALL);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
 		this.address = address;
 		this.port = port;
 		

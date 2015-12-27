@@ -5,63 +5,45 @@ import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.TreeMap;
 
 import ecs.ConsistentHashing;
 import ecs.ECS;
 import ecs.Server;
 
 public class Metadata implements Serializable{
-	private List<Server> servers = new LinkedList<Server>();
+
+	private TreeMap<String, Server> servers = new TreeMap<String, Server>();
+
+	public TreeMap<String, Server> getServers(){
+		return servers;
+	}
+	
 	public void add(Server server){
-		servers.add(server);
+		servers.put(server.hashedkey, server);
 	}
 
+	public void set(TreeMap<String, Server> servers){
+		this.servers = servers;
+	}
+	
+	public Server getSuccessor(String hashedkey){
+		if(servers.size() == 1)
+			return null;
+		if(hashedkey.equals(servers.lastKey())){
+			return servers.firstEntry().getValue();
+		}else{
+			return servers.get(servers.higherKey(hashedkey));
+		}		
+	}
+	
 	public int size(){
 		return servers.size();
 	}
+	
 	public Server putServer(Server server){
-		if(servers.size() == 1){
-			server.from = servers.get(0).hashedkey;
-			server.to = server.hashedkey;
-
-			servers.get(0).from = server.hashedkey;
-			servers.get(0).to = servers.get(0).hashedkey;
-
-			if(server.hashedkey.compareTo(servers.get(0).hashedkey) < 0){
-				servers.add(0, server);
-				return servers.get(1);
-
-			}else{
-				servers.add(1, server);
-				return servers.get(0);
-			}
-		}
-		if(server.hashedkey.compareTo(servers.get(0).from) > 0 || server.hashedkey.compareTo(servers.get(0).to) < 0){
-			server.from = servers.get(0).from;
-			server.to = server.hashedkey;
-
-			servers.add(0, server);
-			server.from = servers.get(1).from;
-			server.to = server.hashedkey;
-			servers.get(1).from = server.hashedkey;
-			
-			return servers.get(1);			
-		}
-		
-		for(int i = 1; i < servers.size(); i++){
-			if(servers.get(i).from.compareTo(server.hashedkey) < 0 && servers.get(i).to.compareTo(server.hashedkey) > 0){
-				server.from = servers.get(i).from;
-				server.to = server.hashedkey;
-
-				servers.add(i, server);
-				server.from = servers.get(i+1).from;
-				server.to = server.hashedkey;
-
-				servers.get(i+1).from = server.hashedkey;
-				return servers.get(i+1);
-			}
-		}
-		return null;
+		servers.put(server.hashedkey, server);
+		return servers.get(servers.higherKey(server.hashedkey));
 	}
 	
 	/**
@@ -73,32 +55,12 @@ public class Metadata implements Serializable{
 	public String[] getServer(String key)
 	{
 		if(servers.size() == 1)
-			return new String [] {servers.get(0).ip, servers.get(0).port};
-		ConsistentHashing conHashing;
-		try {
-			conHashing = new ConsistentHashing();
-			String hashedkey = conHashing.getHashedKey(key);
+			return new String [] {servers.lastEntry().getValue().ip, servers.lastEntry().getValue().port};
 
-			for(int i = 0; i < servers.size(); i++)
-			{
-				Server server = servers.get(i);
-				
-				if(i==0){
-					if(hashedkey.compareTo(server.from) > 0 || hashedkey.compareTo(server.to) < 0)
-						return new String [] {server.ip, server.port};
-				}
-				
-				if(hashedkey.compareTo(server.from) >= 0 && hashedkey.compareTo(server.to) <= 0){
-					return new String[]{server.ip, server.port};
-				}
-			}
-
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		if(key.compareTo(servers.lastEntry().getValue().hashedkey) > 0)
+			return new String [] {servers.firstEntry().getValue().ip, servers.firstEntry().getValue().port};
 		
-		return null;
+		return new String [] {servers.ceilingEntry(key).getValue().ip, servers.ceilingEntry(key).getValue().port};		
 	}
 		
 	public Server remove(Server toRemove){
@@ -110,34 +72,30 @@ public class Metadata implements Serializable{
 
 		if(servers.size() == 2){
 			servers.remove(toRemove);
-			servers.get(0).from = ECS.start;
-			servers.get(0).to = ECS.end;
+			servers.firstEntry().getValue().from = ECS.start;
+			servers.firstEntry().getValue().to = ECS.end;
 
-			return servers.get(0);
+			return servers.firstEntry().getValue();
 		}
+
 		
-		for(int i = 0; i < servers.size(); i++){
-			if(servers.get(i) == toRemove){
-				if(i == servers.size() - 1){
-					servers.get(0).from = toRemove.from;
-					servers.remove(toRemove);
-					return servers.get(0);
-				}
-				else{
-					servers.get(i+1).from = toRemove.from;
-					servers.remove(toRemove);
-					return servers.get(i+1);
-				}
-			}
-		}
-		return null;
+		if(toRemove.hashedkey.equals(servers.lastKey())){
+			servers.firstEntry().getValue().from = toRemove.from;
+			servers.remove(toRemove);
+			return servers.firstEntry().getValue();
+		}else{
+			Server successor = servers.get(servers.higherKey(toRemove.hashedkey));
+			successor.from = toRemove.from;
+			servers.remove(toRemove);
+			return successor;
+		}		
 	}
 	
 	@Override
 	public String toString(){
 		String result = "";
-		for(Server server : servers){
-			result += "{"+server.ip + " " + server.port + " " + server.from + " " + server.to+"}";
+		for(Server server : servers.values()){
+			result += "{"+server.ip + " " + server.port + " " + server.hashedkey + " " + server.from + " " + server.to+"}";
 			result += "<";
 		}
 		return result;

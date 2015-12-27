@@ -183,9 +183,9 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 					for(String dataset: datasets){
 						serverset = dataset.substring(1, dataset.length()-1).split(" ");
 						
-						if(serverset.length == 4)
+						if(serverset.length == 5)
 						{
-							tempdata.add(new Server(serverset[0], serverset[1], serverset[2], serverset[3]));
+							tempdata.add(new Server(serverset[0], serverset[1], serverset[2], serverset[3], serverset[4]));
 						}
 					}
 					

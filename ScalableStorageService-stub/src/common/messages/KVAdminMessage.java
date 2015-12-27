@@ -108,22 +108,21 @@ public class KVAdminMessage extends Message{
 			}else if(keyvalue[0].trim().equals("displacementStrategy")){
 				demessage.setDisplacementStrategy(keyvalue[1].trim());
 			}else if(keyvalue[0].trim().equals("metadata")){
-				System.out.println(keyvalue[1].trim());
+
 				Metadata metadata = new Metadata();
 				
 				String[] datasets = keyvalue[1].trim().split("<");
 				String[] serverset;
 					
-				System.out.println(datasets.length);
 				for(String dataset: datasets){
-					System.out.println(dataset);
+
 					serverset = dataset.substring(1, dataset.length()-1).split(" ");
 					
-					if(serverset.length == 4){
-						metadata.add(new Server(serverset[0], serverset[1], serverset[2], serverset[3]));
+					if(serverset.length == 5){
+						metadata.add(new Server(serverset[0], serverset[1], serverset[2], serverset[3], serverset[4]));
 					}
 				}
-				System.out.println("metadata" + metadata);
+
 				demessage.setMetadata(metadata);
 				
 			}else if(keyvalue[0].trim().equals("data")){

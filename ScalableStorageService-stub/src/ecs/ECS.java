@@ -13,12 +13,10 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.TreeMap;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import common.messages.KVAdminMessage;
 import common.messages.KVAdminMessage.StatusType;
-import logger.LogSetup;
 import metadata.Metadata;
 
 public class ECS {
@@ -30,11 +28,11 @@ public class ECS {
 	private ServerSocket ecsServer;
 	boolean running;
 	
-	private TreeMap<String, Socket> hashservers = new TreeMap<String, Socket>();
+//	private TreeMap<String, Socket> hashservers = new TreeMap<String, Socket>();
 	private HashMap<String, ServerConnection> hashthreads = new HashMap<String, ServerConnection>();
 	private ConsistentHashing conHashing;
 
-	private ArrayList<Server> workingservers = new ArrayList<Server>();
+	private TreeMap<String, Server> workingservers = new TreeMap<String, Server>();
 	private ArrayList<Server> idleservers = new ArrayList<Server>();
 	
 	public ECS(){
@@ -92,31 +90,34 @@ public class ECS {
 					idleservers.remove(server);
 				}
 				
-				workingservers = conHashing.distribute();
+				workingservers = conHashing.getServers();
 
 				//After receiving servers with hashed keys, it will know how to map keys to
 				//each server with the range (from, to) in each server, and store the information
 				//in metadata which will be used by both client and server
-				
-				for(int i = 0; i < workingservers.size(); i++){
+
+
+				for(String key : workingservers.keySet()){
 					if(workingservers.size() == 1){
-						workingservers.get(i).from = start;
-						workingservers.get(i).to = end;
-						metadata.add(workingservers.get(i));
+						workingservers.get(key).from = start;
+						workingservers.get(key).to = end;
 						break;
 					}
-					if(i == 0){
-						workingservers.get(i).from = workingservers.get(workingservers.size() - 1).hashedkey;
-						workingservers.get(i).to = workingservers.get(i).hashedkey;
+					
+					
+					workingservers.get(key).to = key;
+
+					String formerkey = workingservers.lowerKey(key);
+
+					if(formerkey == null){
+						formerkey = workingservers.lastKey();
 					}
-					else{
-						workingservers.get(i).from = workingservers.get(i-1).hashedkey;
-						workingservers.get(i).to = workingservers.get(i).hashedkey;
-					}
-					metadata.add(workingservers.get(i));
+					workingservers.get(key).from = workingservers.get(formerkey).hashedkey;					
 				}
 
-				for(Server server : workingservers){
+				metadata.set(workingservers);
+				
+				for(Server server : workingservers.values()){
 					logger.info(server);
 				}
 				
@@ -201,8 +202,8 @@ public class ECS {
 					logger.info("The server with ip:"+newworkingserver.ip + " and port:"+newworkingserver.port + "is picked as a new node");
 					
 					//Recalculate and update the meta­data of the storage service
-					newworkingserver.hashedkey = conHashing.getHashedKey(newworkingserver.ip, Integer.parseInt(newworkingserver.port));
-					workingservers.add(newworkingserver);
+					newworkingserver.hashedkey = conHashing.getHashedKey(newworkingserver.ip + newworkingserver.port);
+					workingservers.put(newworkingserver.hashedkey, newworkingserver);
 					idleservers.remove(newworkingserver);
 		
 					Server successor = metadata.putServer(newworkingserver);
@@ -213,7 +214,7 @@ public class ECS {
 							if(kvserver.getInetAddress().toString().equals("/" + newworkingserver.ip) && kvserver.getPort() == Integer.parseInt(newworkingserver.port)){
 								ServerConnection connection = new ServerConnection(kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
 								hashthreads.put(newworkingserver.hashedkey, connection);
-								hashservers.put(newworkingserver.hashedkey, kvserver);
+//								hashservers.put(newworkingserver.hashedkey, kvserver);
 				
 								connection.start();
 								connection.receiveData();
@@ -297,7 +298,7 @@ public class ECS {
 //		}.start();
 //	}
 
-	public ArrayList<Server> getServers(){
+	public TreeMap<String, Server> getServers(){
 		return workingservers;
 	}
 	
@@ -328,11 +329,11 @@ public class ECS {
 						int receivedport = msg.getPort();
 		
 						
-						for(Server server : workingservers){
+						for(Server server : workingservers.values()){
 							
 							if( receivedport == Integer.parseInt(server.port) && 
 									kvserver.getInetAddress().toString().equals("/" + server.ip)){
-								hashservers.put(server.hashedkey, kvserver);						
+//								hashservers.put(server.hashedkey, kvserver);						
 	
 								ServerConnection connection = new ServerConnection (kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
 								hashthreads.put(server.hashedkey, connection);

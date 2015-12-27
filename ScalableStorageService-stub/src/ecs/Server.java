@@ -13,9 +13,10 @@ public class Server implements Comparator<Server>{
 		
 	}
 	
-	public Server(String ip, String port, String from, String to){
+	public Server(String ip, String port, String hashedkey, String from, String to){
 		this.ip = ip;
 		this.port = port;
+		this.hashedkey = hashedkey;
 		this.from = from;
 		this.to = to;
 	}
