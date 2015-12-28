@@ -17,7 +17,9 @@ import org.apache.log4j.Logger;
 
 import common.messages.KVAdminMessage;
 import common.messages.KVAdminMessage.StatusType;
+import common.messages.KVMessage;
 import common.messages.MessageHandler;
+import common.messages.TextMessage;
 import ecs.ConsistentHashing;
 import ecs.Server;
 import logger.LogSetup;
@@ -29,20 +31,20 @@ public class KVServer{
 	
 	
 	private static Logger logger = Logger.getRootLogger();
-
-	private static final int BUFFER_SIZE = 1024;
-	private static final int DROP_SIZE = 128 * BUFFER_SIZE;
 	
 	private int port;
 	private int cacheSize;
 	private Strategy strategy;
+	//serve clients
     private ServerSocket serverSocket;
+    //serve movement of data
     private ServerSocket serverMove;
+    //serve replications
+    private ServerSocket replicaSocket;
+    //connect to ECS
     private Socket clientSocket;
 
-    private InputStream input;
-	private OutputStream output;
-	private MessageHandler messageHandler;
+	private MessageHandler ecsMsgHandler;
 	
     public static AtomicBoolean running = new AtomicBoolean(false);
     private boolean shutdown;
@@ -50,8 +52,11 @@ public class KVServer{
     private HashMap<String, String> keyvalue;
     private Persistance persistance;
     private Metadata metadata;
-
+        
 	private ConsistentHashing conHashing;
+	private StorageManager storageManager;
+
+	private MessageHandler [] successors = new MessageHandler[2];
 
     
     /**
@@ -118,7 +123,7 @@ public class KVServer{
 
 		                Socket client = serverSocket.accept();
 		                ClientConnection connection = 
-		                		new ClientConnection(client, serverSocket, keyvalue, cacheSize, strategy, persistance, metadata);
+		                		new ClientConnection(client, serverSocket, keyvalue, cacheSize, strategy, persistance, metadata, successors);
 		               (new Thread(connection)).start();
 		                
 		                logger.info("Connected to " 
@@ -151,7 +156,7 @@ public class KVServer{
 	private void communicateECS(){
 		while(!shutdown){
 			try {
-				byte [] b =messageHandler.receiveMessage();
+				byte [] b =ecsMsgHandler.receiveMessage();
 				
 				KVAdminMessage message = new KVAdminMessage(b);
 				message = message.deserialize(new String(b, "UTF-8"));
@@ -219,10 +224,7 @@ public class KVServer{
     	
     	try {
 			clientSocket = new Socket("127.0.0.1", 40000);
-			output = clientSocket.getOutputStream();
-			input = clientSocket.getInputStream();
-
-			messageHandler = new MessageHandler(input, output, logger);
+			ecsMsgHandler = new MessageHandler(clientSocket.getInputStream(),  clientSocket.getOutputStream(), logger);
 			
 			KVAdminMessage msg = new KVAdminMessage();
 			msg.setStatusType(StatusType.RECEIVED);
@@ -230,7 +232,7 @@ public class KVServer{
 
 			this.persistance = new Persistance("127.0.0.1", port);
 			
-			messageHandler.sendMessage(msg.serialize().getMsg());
+			ecsMsgHandler.sendMessage(msg.serialize().getMsg());
 						
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -268,6 +270,20 @@ public class KVServer{
     	this.cacheSize = cacheSize;
 		this.strategy = StrategyFactory.getStrategy(displacementStrategy);
 		shutdown = false;
+
+		try {
+			replicaSocket = new ServerSocket(port+20);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		storageManager = StorageManager.getInstance(keyvalue, metadata, strategy, cacheSize, persistance, logger);
+
+		RepConnection repConnection = new RepConnection(replicaSocket, storageManager, logger);
+		Thread thread = new Thread(repConnection);
+		thread.start();
+
     }
 
     /**
@@ -280,6 +296,8 @@ public class KVServer{
     		running.set(true);
     		running.notifyAll();
     	}
+
+		updateSuccessors();
 
     	logger.info("The server is started");
     }
@@ -383,7 +401,7 @@ public class KVServer{
 
 		KVAdminMessage moveFinished = new KVAdminMessage();
 		moveFinished.setStatusType(StatusType.MOVEFINISH);
-		messageHandler.sendMessage(moveFinished.serialize().getMsg());
+		ecsMsgHandler.sendMessage(moveFinished.serialize().getMsg());
 		
     	logger.info(toRemove.size() + " keyvalue pair are transferred");
 		
@@ -450,44 +468,42 @@ public class KVServer{
     
     public void update(Metadata metadata){
     	this.setMetadata(metadata);
+    	updateSuccessors();
 		logger.info("metadata is updated: " + metadata);
-
     }
     
-    
     /**
-     * insert replicas to two successors
+     * get two successors
+     * @return two successor server, can be null
      */
-    
-    public void inserts(String key, String value){
-
+    private void updateSuccessors(){
     	Server successor = metadata.getSuccessor(conHashing.getHashedKey("127.0.0.1" + port));
     	
     	if(successor != null){
+    		try {
+    			System.out.println(successor.ip);
+    			System.out.println(Integer.parseInt(successor.port)+20);
+				Socket successorSocket= new Socket(successor.ip, Integer.parseInt(successor.port)+20);
+				successors[0] = new MessageHandler(successorSocket.getInputStream(), successorSocket.getOutputStream(), logger);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				logger.error(e.getMessage());
+			}
     		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
     		if(!sesuccessor.hashedkey.equals(conHashing.getHashedKey("127.0.0.1" + port))){
-    			
+    			try{
+    				Socket sesuccessorSocket= new Socket(sesuccessor.ip, Integer.parseInt(sesuccessor.port)+20);
+    				successors[1] = new MessageHandler(sesuccessorSocket.getInputStream(), sesuccessorSocket.getOutputStream(), logger);
+    			}catch(Exception e){
+    				logger.error(e.getMessage());    				
+    			}
     		}
+
     	}
+
     }
     
 
-    /**
-     * update replicas
-     */
-    
-    public void updates(String key, String value){
-    	
-    }
-
-    
-    /**
-     * delete replicas
-     */
-    
-    public void deletes(String key, String value){
-    	
-    }
 
     
     /**
@@ -496,9 +512,8 @@ public class KVServer{
      */
     public static void main(String[] args) {
     	try {
-
 			KVServer kvserver = new KVServer();
-			kvserver.run(50005);
+			kvserver.run(50003);
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");

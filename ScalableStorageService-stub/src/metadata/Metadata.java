@@ -55,12 +55,12 @@ public class Metadata implements Serializable{
 	public String[] getServer(String key)
 	{
 		if(servers.size() == 1)
-			return new String [] {servers.lastEntry().getValue().ip, servers.lastEntry().getValue().port};
+			return new String [] {servers.lastEntry().getValue().ip, servers.lastEntry().getValue().port, servers.lastEntry().getValue().hashedkey};
 
 		if(key.compareTo(servers.lastEntry().getValue().hashedkey) > 0)
-			return new String [] {servers.firstEntry().getValue().ip, servers.firstEntry().getValue().port};
+			return new String [] {servers.firstEntry().getValue().ip, servers.firstEntry().getValue().port, servers.firstEntry().getValue().hashedkey};
 		
-		return new String [] {servers.ceilingEntry(key).getValue().ip, servers.ceilingEntry(key).getValue().port};		
+		return new String [] {servers.ceilingEntry(key).getValue().ip, servers.ceilingEntry(key).getValue().port, servers.ceilingEntry(key).getValue().hashedkey};
 	}
 		
 	public Server remove(Server toRemove){

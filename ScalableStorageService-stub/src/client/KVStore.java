@@ -18,6 +18,7 @@ import common.messages.TextMessage;
 import client.ClientSocketListener.SocketStatus;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
+import ecs.Server;
 import logger.LogSetup;
 import common.messages.MessageHandler;
 import metadata.Metadata;
@@ -202,12 +203,12 @@ public class KVStore implements KVCommInterface {
 		sentMessage.setStatusType(StatusType.GET);
 		sentMessage.setKey(key);
 		
-		if(metadata != null)
-		{
+		if(metadata != null){
 			String[] correctServer = metadata.getServer(key);
+			Server successor = metadata.getSuccessor(correctServer[2]);
+			Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
 			
-			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port)))
-			{
+			if((!sesuccessor.ip.equals(this.address) || !sesuccessor.port.equals("" + this.port)) && (!successor.ip.equals(this.address) || !successor.port.equals("" + this.port)) && (!correctServer[0].equals(this.address) || !correctServer[1].equals("" + this.port))){
 				disconnect();
 				this.address = correctServer[0];
 				this.port = Integer.parseInt(correctServer[1]);
