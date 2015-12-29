@@ -199,7 +199,7 @@ public class ECS {
 					Random random = new Random();
 					Server newworkingserver = idleservers.get(random.nextInt(idleservers.size()));
 
-					logger.info("The server with ip:"+newworkingserver.ip + " and port:"+newworkingserver.port + "is picked as a new node");
+					logger.info("The server with ip:"+newworkingserver.ip + " and port:"+newworkingserver.port + " is picked as a new node");
 					
 					//Recalculate and update the meta­data of the storage service
 					newworkingserver.hashedkey = conHashing.getHashedKey(newworkingserver.ip + newworkingserver.port);
@@ -209,16 +209,29 @@ public class ECS {
 					Server successor = metadata.putServer(newworkingserver);
 		
 					try {
-						Socket kvserver;
-						while((kvserver = ecsServer.accept()) != null){
-							if(kvserver.getInetAddress().toString().equals("/" + newworkingserver.ip) && kvserver.getPort() == Integer.parseInt(newworkingserver.port)){
-								ServerConnection connection = new ServerConnection(kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
-								hashthreads.put(newworkingserver.hashedkey, connection);
-//								hashservers.put(newworkingserver.hashedkey, kvserver);
+						Socket kvserver = null;
+						while((kvserver = ecsServer.accept()) != null){					
+//							if(kvserver.getInetAddress().toString().equals("/" + newworkingserver.ip) && kvserver.getPort() == Integer.parseInt(newworkingserver.port)){
+							ServerConnection connection = new ServerConnection(kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
+							hashthreads.put(newworkingserver.hashedkey, connection);
 				
-								connection.start();
-								connection.receiveData();
-							}
+							connection.run();
+
+							byte [] b = connection.getInput();
+							KVAdminMessage msg = new KVAdminMessage();
+							msg = msg.deserialize(new String(b, "UTF-8"));
+							int receivedport = msg.getPort();
+
+							if(!(""+receivedport).equals(newworkingserver.port))
+								continue;
+							
+							connection.startServer();
+							connection.receiveData();
+							connection.getInput();
+							break;
+							
+//							}
+
 						}
 						
 					} catch (IOException e) {

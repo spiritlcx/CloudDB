@@ -12,10 +12,8 @@ import metadata.Metadata;
 import org.apache.log4j.*;
 
 import common.messages.KVMessage.StatusType;
-import common.messages.KVMessage;
 import common.messages.MessageHandler;
 import common.messages.TextMessage;
-import ecs.Server;
 import strategy.Strategy;
 
 
@@ -31,15 +29,12 @@ public class ClientConnection implements Runnable {
 	private static Logger logger = Logger.getRootLogger();
 	
 	private boolean isOpen;
-	private static final int BUFFER_SIZE = 1024;
-	private static final int DROP_SIZE = 128 * BUFFER_SIZE;
 	
 	private Socket clientSocket;
 	private ServerSocket serverSocket;
 	private InputStream input;
 	private OutputStream output;
 
-	private int cacheSize;
 	private Strategy strategy;
 	private HashMap<String, String> keyvalue;
 	private Persistance persistance;
@@ -48,8 +43,7 @@ public class ClientConnection implements Runnable {
 	private MessageHandler messageHandler;
 	private StorageManager storageManager;
 	
-    private MessageHandler [] successors;
-
+    private ReplicationManager replicationManager;
 	
 	/**
 	 * 
@@ -66,13 +60,12 @@ public class ClientConnection implements Runnable {
 		this.serverSocket = serverSocket;
 		this.keyvalue = keyvalue;
 		this.isOpen = true;
-		this.cacheSize = cacheSize;
 		this.strategy = strategy;
 		this.persistance = persistance;
 		this.metadata = metadata;
-		this.successors = successors;
 		
 		storageManager = StorageManager.getInstance(keyvalue, metadata, strategy, cacheSize, persistance, logger);
+		replicationManager= new ReplicationManager(successors, logger);
 	}
 	
 	/**
@@ -176,17 +169,7 @@ public class ClientConnection implements Runnable {
 			sentMessage.setStatusType(type);
 			sentMessage.setKey(key);
 			sentMessage.setValue(value);
-			switch(type){
-			case PUT_SUCCESS:
-				inserts(key, value);
-				break;
-			case PUT_UPDATE:
-				updates(key, value);
-				break;
-			case DELETE_SUCCESS:
-				deletes(key);
-				break;
-			}
+			replicationManager.replicate(type, key, value);
 		}
 		else{
 			sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
@@ -261,70 +244,5 @@ public class ClientConnection implements Runnable {
 				logger.error("Unable to send response!", e);
 			}
 		}
-
 	}
-	
-    /**
-     * insert replicas to two successors
-     */
-    
-    public void inserts(String key, String value){
-    	for(MessageHandler successor : successors){
-    		TextMessage sentMessage = new TextMessage();
-    		sentMessage.setStatusType(KVMessage.StatusType.PUT);
-    		sentMessage.setKey(key);
-    		sentMessage.setValue(value);
-    		sentMessage = sentMessage.serialize();
-    		try {
-				successor.sendMessage(sentMessage.getMsg());
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				logger.error(e.getMessage());
-			}
-
-    	}
-    }
-    
-
-    /**
-     * update replicas
-     */
-    
-    public void updates(String key, String value){
-    	for(MessageHandler successor : successors){
-    		TextMessage sentMessage = new TextMessage();
-    		sentMessage.setStatusType(KVMessage.StatusType.PUT);
-    		sentMessage.setKey(key);
-    		sentMessage.setValue(value);    	
-    		sentMessage = sentMessage.serialize();
-    		try {
-				successor.sendMessage(sentMessage.getMsg());
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				logger.error(e.getMessage());
-			}
-    	}
-    }
-
-    
-    /**
-     * delete replicas
-     */
-    
-    public void deletes(String key){
-    	for(MessageHandler successor : successors){
-    		TextMessage sentMessage = new TextMessage();
-    		sentMessage.setStatusType(KVMessage.StatusType.PUT);
-    		sentMessage.setKey(key);
-    		sentMessage.setValue("null");
-    		sentMessage = sentMessage.serialize();
-    		try {
-				successor.sendMessage(sentMessage.getMsg());
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				logger.error(e.getMessage());
-			}
-
-    	}
-    }
 }

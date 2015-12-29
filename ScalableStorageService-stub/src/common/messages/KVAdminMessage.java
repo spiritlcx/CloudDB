@@ -18,7 +18,8 @@ public class KVAdminMessage extends Message{
 		RECEIVE, // processor will prepare to receive data
 		MOVEFINISH,
 		DATA,
-		UPDATE
+		UPDATE,
+		PREPARED
 	}
 		
 	private String msg;
@@ -63,6 +64,7 @@ public class KVAdminMessage extends Message{
 		case SHUTDOWN:
 		case WRITELOCK:
 		case RECEIVE:
+		case PREPARED:
 		case MOVEFINISH:
 			return new KVAdminMessage("{StatusType: " + type +"}");
 		case RECEIVED:
@@ -131,6 +133,8 @@ public class KVAdminMessage extends Message{
 				demessage.setFrom(keyvalue[1].trim());
 			}else if(keyvalue[0].trim().equals("to")){
 				demessage.setTo(keyvalue[1].trim());
+			}else if(keyvalue[0].trim().equals("ip")){
+				demessage.setIp(keyvalue[1].trim());
 			}
 		}
 

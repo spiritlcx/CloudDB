@@ -360,7 +360,11 @@ public class KVServer{
     	KVAdminMessage dataMessage = new KVAdminMessage();
 		dataMessage.setStatusType(StatusType.DATA);		
 
+		System.out.println(ip);
+		
 		Socket moveSender = new Socket(ip, 30000);
+		
+		System.out.println("connected");
 		
 		MessageHandler senderHandler = new MessageHandler(moveSender.getInputStream(), moveSender.getOutputStream(), logger);
 		
@@ -410,8 +414,13 @@ public class KVServer{
 
     public void receiveData() throws IOException{
 		serverMove = new ServerSocket(30000);
-		Socket clientMove = serverMove.accept();
+
+		KVAdminMessage preparedMessage = new KVAdminMessage();
+		preparedMessage.setStatusType(StatusType.PREPARED);
+		ecsMsgHandler.sendMessage(preparedMessage.serialize().getMsg());
 		
+		Socket clientMove = serverMove.accept();
+
 		
 		InputStream moveinput = clientMove.getInputStream();
 		MessageHandler receiverHandler = new MessageHandler(moveinput, null, logger);
@@ -481,8 +490,6 @@ public class KVServer{
     	
     	if(successor != null){
     		try {
-    			System.out.println(successor.ip);
-    			System.out.println(Integer.parseInt(successor.port)+20);
 				Socket successorSocket= new Socket(successor.ip, Integer.parseInt(successor.port)+20);
 				successors[0] = new MessageHandler(successorSocket.getInputStream(), successorSocket.getOutputStream(), logger);
 			} catch (Exception e) {
@@ -502,10 +509,7 @@ public class KVServer{
     	}
 
     }
-    
-
-
-    
+        
     /**
      * Main entry point for the echo server application. 
      * @param args contains the port number at args[0].
@@ -513,7 +517,7 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-			kvserver.run(50003);
+			kvserver.run(50006);
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");

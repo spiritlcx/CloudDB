@@ -206,9 +206,12 @@ public class KVStore implements KVCommInterface {
 		if(metadata != null){
 			String[] correctServer = metadata.getServer(key);
 			Server successor = metadata.getSuccessor(correctServer[2]);
-			Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
-			
-			if((!sesuccessor.ip.equals(this.address) || !sesuccessor.port.equals("" + this.port)) && (!successor.ip.equals(this.address) || !successor.port.equals("" + this.port)) && (!correctServer[0].equals(this.address) || !correctServer[1].equals("" + this.port))){
+			Server sesuccessor = null;
+			if(successor != null){
+				sesuccessor = metadata.getSuccessor(successor.hashedkey);
+			}
+
+			if((!correctServer[0].equals(this.address) || !correctServer[1].equals("" + this.port)) && (!sesuccessor.ip.equals(this.address) || !sesuccessor.port.equals("" + this.port)) && (!successor.ip.equals(this.address) || !successor.port.equals("" + this.port))){
 				disconnect();
 				this.address = correctServer[0];
 				this.port = Integer.parseInt(correctServer[1]);

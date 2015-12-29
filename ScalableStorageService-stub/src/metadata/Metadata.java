@@ -34,7 +34,7 @@ public class Metadata implements Serializable{
 			return servers.firstEntry().getValue();
 		}else{
 			return servers.get(servers.higherKey(hashedkey));
-		}		
+		}
 	}
 	
 	public int size(){
@@ -42,8 +42,31 @@ public class Metadata implements Serializable{
 	}
 	
 	public Server putServer(Server server){
+		
+		Server successor = null;
+		
+		if(servers.size() == 1){
+			successor = servers.firstEntry().getValue();
+			server.from = successor.hashedkey;
+			
+			successor.to = successor.hashedkey;
+		}
+		
+		if(servers.higherKey(server.hashedkey) !=null){
+			successor = servers.get(servers.higherKey(server.hashedkey));
+			server.from = successor.from;
+						
+		}else{
+			successor = servers.get(servers.firstEntry().getKey());
+			server.from = successor.from;	
+		}
+
+		successor.from = server.hashedkey;
+		server.to = server.hashedkey;
+		
 		servers.put(server.hashedkey, server);
-		return servers.get(servers.higherKey(server.hashedkey));
+
+		return successor;
 	}
 	
 	/**
