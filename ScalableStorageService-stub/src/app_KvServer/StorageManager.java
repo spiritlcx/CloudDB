@@ -19,6 +19,10 @@ public class StorageManager {
 
 	private static StorageManager storageManager = null;
 	
+	public static StorageManager getInstance(){
+		return storageManager;
+	}
+	
 	public static StorageManager getInstance(HashMap<String, String> keyvalue, Metadata metadata, Strategy strategy, int cacheSize, Persistance persistance, Logger logger){
 		if(storageManager == null){
 			synchronized(StorageManager.class){
@@ -37,6 +41,14 @@ public class StorageManager {
 		this.persistance = persistance;
 		this.cacheSize = cacheSize;
 		this.logger = logger;
+	}
+
+	public HashMap<String, String> getKeyValue(){
+		return keyvalue;
+	}
+	
+	public Persistance getPersistance(){
+		return persistance;
 	}
 	
 	public StatusType put(String key, String value){
@@ -151,6 +163,9 @@ public class StorageManager {
 		String [] server = metadata.getServer(key);
 		Server successor = metadata.getSuccessor(server[2]);
 		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
-		return server != null && ((sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port)) || (successor.ip.equals(ip) && successor.port.equals(port)));
+		System.out.println("port1:" + successor.port);
+		System.out.println("port2:" + sesuccessor.port);
+
+		return server != null && successor!= null && ((sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port)) || (successor.ip.equals(ip) && successor.port.equals(port)));
 	}
 }

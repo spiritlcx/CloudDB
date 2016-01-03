@@ -7,6 +7,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
+
 import org.apache.log4j.*;
 /**
  * Persistence class to handle the storage of data on the disk.
@@ -73,6 +75,31 @@ public class Persistance {
 
 		return null;
 		
+	}
+	
+	public HashMap<String, String> getAllPairs(){
+		HashMap<String, String> keyvalue = new HashMap<String, String>();
+		try {
+			reader = new BufferedReader(new FileReader(file));
+			String temp = null;
+			if((temp = reader.readLine())!=null){
+				String [] kvpair = temp.split(",", 2);
+				if(kvpair != null && kvpair.length == 2){
+					keyvalue.put(kvpair[0], kvpair[1]);
+				}
+			}
+		} catch (IOException e) {
+			Logger.getRootLogger().error("Data lookup error.", e);
+		} finally{
+			try {
+				reader.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				Logger.getRootLogger().error("Reader close error.", e);				
+			}			
+		}
+		
+		return keyvalue;
 	}
 	
 	public String lookup(String key){

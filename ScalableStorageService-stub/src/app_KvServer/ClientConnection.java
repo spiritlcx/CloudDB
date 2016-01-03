@@ -65,7 +65,7 @@ public class ClientConnection implements Runnable {
 		this.metadata = metadata;
 		
 		storageManager = StorageManager.getInstance(keyvalue, metadata, strategy, cacheSize, persistance, logger);
-		replicationManager= new ReplicationManager(successors, logger);
+		replicationManager= ReplicationManager.getInstance(successors, logger);
 	}
 	
 	/**
@@ -192,10 +192,10 @@ public class ClientConnection implements Runnable {
 			logger.error("not valid key");
 			return;
 		}
-		
+
 		if(storageManager.isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), receivedMessage.getKey()) || 
 				storageManager.isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), receivedMessage.getKey())){
-
+			
 			String value = null;
 			if(keyvalue.get(receivedMessage.getKey()) != null){
 				value = keyvalue.get(receivedMessage.getKey());

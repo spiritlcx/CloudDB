@@ -5,8 +5,11 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +29,7 @@ public class ECS {
 	public static String start = "00000000000000000000000000000000";
 	public static String end = "ffffffffffffffffffffffffffffffff";
 	private ServerSocket ecsServer;
+	DatagramSocket detectorServer;
 	boolean running;
 	
 //	private TreeMap<String, Socket> hashservers = new TreeMap<String, Socket>();
@@ -55,7 +59,43 @@ public class ECS {
 	 * the ECS. All servers are initialized with the meta­data and 
 	 * remain in state stopped.
 	 */
-	public void initService (int numberOfNodes, int cacheSize, String displacementStrategy){
+	public void initService (int numberOfNodes, int cacheSize, String displacementStrategy){		
+		initServers(numberOfNodes);
+		initFailureDetector();
+	}
+	
+	private void initFailureDetector(){
+		try {
+			detectorServer = new DatagramSocket(20000);
+			new Thread(){
+				public void run(){
+					while(running){
+						byte[] receiveData = new byte[128];
+						DatagramPacket receivePacket = new DatagramPacket(receiveData, receiveData.length);
+						try {
+							detectorServer.receive(receivePacket);
+							String failure = new String(receiveData);
+							String [] ipport = failure.split(" ");
+							
+							if(ipport.length == 2){
+								System.out.println(ipport[1] + " has failed");
+							}
+							
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}					
+				}
+			}.start();
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			logger.error("failure detector cannot be initialized");
+		}
+
+	}
+	
+	private void initServers(int numberOfNodes){
 		File file = new File("ecs.config");
 		try {
 			BufferedReader reader = new BufferedReader(new FileReader(file));
@@ -129,8 +169,9 @@ public class ECS {
 			// TODO Auto-generated catch block
 			logger.error(e.getMessage());
 		}
+
 	}
-		
+	
 	/**
 	 *  Starts the storage service by calling start() on all KVServer 
 	 *  instances that participate in the service. 
@@ -231,7 +272,6 @@ public class ECS {
 							break;
 							
 //							}
-
 						}
 						
 					} catch (IOException e) {

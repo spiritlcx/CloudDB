@@ -2,7 +2,6 @@ package app_KvServer;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -17,9 +16,7 @@ import org.apache.log4j.Logger;
 
 import common.messages.KVAdminMessage;
 import common.messages.KVAdminMessage.StatusType;
-import common.messages.KVMessage;
 import common.messages.MessageHandler;
-import common.messages.TextMessage;
 import ecs.ConsistentHashing;
 import ecs.Server;
 import logger.LogSetup;
@@ -28,8 +25,6 @@ import strategy.Strategy;
 import strategy.StrategyFactory;
 
 public class KVServer{
-	
-	
 	private static Logger logger = Logger.getRootLogger();
 	
 	private int port;
@@ -57,8 +52,9 @@ public class KVServer{
 	private StorageManager storageManager;
 
 	private MessageHandler [] successors = new MessageHandler[2];
-
-    
+	private ReplicationManager replicationManager;
+	private FailureDetector failureDetector;
+	
     /**
 	 * Start KV Server at given port
 	 * @param port given port for storage server to operate
@@ -73,6 +69,7 @@ public class KVServer{
 		try {
 			new LogSetup("logs/server.log", Level.ALL);
 			conHashing = new ConsistentHashing();
+
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -160,10 +157,6 @@ public class KVServer{
 				
 				KVAdminMessage message = new KVAdminMessage(b);
 				message = message.deserialize(new String(b, "UTF-8"));
-				if(message == null){
-					logger.error(message.getMsg() + " is not complete data");
-					continue;
-				}
 
 				ArrayList<String> toRemove = null;
 
@@ -177,15 +170,16 @@ public class KVServer{
 
 					break;
 				case MOVE:
-
 					String from = message.getFrom();
 					String to = message.getTo();
 					String ip = message.getIp();
 					
 					toRemove = moveData(from, to, ip);
+					replicationManager.removeRepSesuccessor(toRemove);
 					break;
 				case RECEIVE:
-					receiveData();
+					HashMap<String, String> receivedPairs = receiveData();
+					replicationManager.addRepSesuccessor(receivedPairs);
 					break;
 				case SHUTDOWN:
 					shutDown();
@@ -202,7 +196,7 @@ public class KVServer{
 					break;
 				case WRITELOCK:
 					lock = !lock;
-					if(toRemove != null)
+					if(lock == false && toRemove != null)
 						removeData(toRemove);
 					break;
 				default:
@@ -272,6 +266,19 @@ public class KVServer{
 		shutdown = false;
 
 		try {
+			failureDetector = new FailureDetector("127.0.0.1", port);
+			for(Server server :metadata.getServers().values()){
+				if(server.ip.equals("127.0.0.1") && server.port.equals(""+port))
+					continue;
+				failureDetector.add(server.ip, Integer.parseInt(server.port));
+			}
+
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			logger.error("failure detector cannot be initialized");
+		}
+		
+		try {
 			replicaSocket = new ServerSocket(port+20);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -279,7 +286,8 @@ public class KVServer{
 		}
 		
 		storageManager = StorageManager.getInstance(keyvalue, metadata, strategy, cacheSize, persistance, logger);
-
+    	replicationManager = ReplicationManager.getInstance(successors, logger);
+		
 		RepConnection repConnection = new RepConnection(replicaSocket, storageManager, logger);
 		Thread thread = new Thread(repConnection);
 		thread.start();
@@ -298,6 +306,7 @@ public class KVServer{
     	}
 
 		updateSuccessors();
+		failureDetector.start();
 
     	logger.info("The server is started");
     }
@@ -358,14 +367,10 @@ public class KVServer{
 		ArrayList<String> toRemove = new ArrayList<String>();
 
     	KVAdminMessage dataMessage = new KVAdminMessage();
-		dataMessage.setStatusType(StatusType.DATA);		
-
-		System.out.println(ip);
+		dataMessage.setStatusType(StatusType.DATA);
 		
 		Socket moveSender = new Socket(ip, 30000);
-		
-		System.out.println("connected");
-		
+				
 		MessageHandler senderHandler = new MessageHandler(moveSender.getInputStream(), moveSender.getOutputStream(), logger);
 		
 		String data = "";
@@ -379,7 +384,7 @@ public class KVServer{
 						toRemove.add(key);
 						String value = keyvalue.get(key);
 							data += (key + " " + value);
-						data += ".";									
+						data += ":";									
 					}
 					continue;
 				}
@@ -411,8 +416,8 @@ public class KVServer{
 		
 		return toRemove;
     }
-
-    public void receiveData() throws IOException{
+    
+    public HashMap<String, String> receiveData() throws IOException{
 		serverMove = new ServerSocket(30000);
 
 		KVAdminMessage preparedMessage = new KVAdminMessage();
@@ -429,34 +434,36 @@ public class KVServer{
 		KVAdminMessage receivedData = new KVAdminMessage(datab);
 		receivedData = receivedData.deserialize(receivedData.getMsg());
 		
+		HashMap<String, String> receivedPairs = new HashMap<String, String>();
+		
 		if(receivedData.getStatusType() == StatusType.DATA){
 			String datamsg = receivedData.getData();
 			
-			String [] pairs = datamsg.split(".");
-			if(pairs != null){
-				for(String pair : pairs){
-					String[] kvpair = pair.split(" ");
-					if(kvpair.length == 2){
-						if(keyvalue.size() < cacheSize){
-							synchronized(keyvalue){
-								keyvalue.put(kvpair[0], kvpair[1]);
-							}
-						}else{
-							persistance.store(kvpair[0], kvpair[1]);
+			String [] pairs = datamsg.split(":");
+
+			for(String pair : pairs){
+				String[] kvpair = pair.split(" ");
+				if(kvpair.length == 2){
+					receivedPairs.put(kvpair[0], kvpair[1]);
+					if(keyvalue.size() < cacheSize){
+						synchronized(keyvalue){
+							keyvalue.put(kvpair[0], kvpair[1]);
 						}
+					}else{
+						persistance.store(kvpair[0], kvpair[1]);
 					}
 				}
-		    	logger.info((pairs.length -1) + " key value pairs are received");
-			}else{
-		    	logger.info("no key value pair is received");				
 			}
+		   	logger.info(pairs.length + " key value pairs are received");
+
 		}else{
 			logger.error("Format of received data is not correct");
 		}
 
 		serverMove.close();
 		clientMove.close();
-
+		
+		return receivedPairs;
     }
     
     public void removeData(ArrayList<String> toRemove){
@@ -507,7 +514,6 @@ public class KVServer{
     		}
 
     	}
-
     }
         
     /**
@@ -517,7 +523,7 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-			kvserver.run(50006);
+			kvserver.run(50004);
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
