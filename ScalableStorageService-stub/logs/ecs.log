@@ -69,3 +69,36 @@
 '
 2016-01-06 12:56:05,335 INFO  [Thread-1] root: Send message:	 '{StatusType: UPDATE, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}
 '
+2016-01-06 13:55:34,542 INFO  [Thread-0] root: server:{127.0.0.1,50002,d9c48d384cfef4edfc3305610fb2c31a,1752af20beba3cdb5e87f5be2dd3c5de}
+2016-01-06 13:55:34,543 INFO  [Thread-0] root: server:{127.0.0.1,50004,1752af20beba3cdb5e87f5be2dd3c5de,1d4069d9c7595fd46ff64e61cba5519e}
+2016-01-06 13:55:34,543 INFO  [Thread-0] root: server:{127.0.0.1,50005,1d4069d9c7595fd46ff64e61cba5519e,d9c48d384cfef4edfc3305610fb2c31a}
+2016-01-06 13:55:46,280 INFO  [Thread-0] root: /127.0.0.1 37474 is connected
+2016-01-06 13:55:46,284 INFO  [Thread-0] root: Send message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}
+'
+2016-01-06 13:55:46,284 INFO  [Thread-0] root: Received message:	 '{StatusType: RECEIVED, port: 50002}'
+2016-01-06 13:55:52,407 INFO  [Thread-0] root: /127.0.0.1 37475 is connected
+2016-01-06 13:55:52,408 INFO  [Thread-0] root: Send message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}
+'
+2016-01-06 13:55:52,410 INFO  [Thread-0] root: Received message:	 '{StatusType: RECEIVED, port: 50004}'
+2016-01-06 13:55:57,431 INFO  [Thread-0] root: /127.0.0.1 37476 is connected
+2016-01-06 13:55:57,432 INFO  [Thread-0] root: Send message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}
+'
+2016-01-06 13:55:57,438 INFO  [Thread-0] root: Received message:	 '{StatusType: RECEIVED, port: 50005}'
+2016-01-06 13:56:00,239 INFO  [Thread-2] root: Send message:	 '{StatusType: START}
+'
+2016-01-06 13:56:00,243 INFO  [Thread-2] root: Send message:	 '{StatusType: START}
+'
+2016-01-06 13:56:00,243 INFO  [Thread-2] root: Send message:	 '{StatusType: START}
+'
+2016-01-06 14:20:57,536 INFO  [Thread-0] root: server:{127.0.0.1,50001,ea36ea4c34116912eddfd0a3e2faeedf,61235262bbcf66352227ca8fac0615f3}
+2016-01-06 14:20:57,537 INFO  [Thread-0] root: server:{127.0.0.1,50007,61235262bbcf66352227ca8fac0615f3,8fde0784e948d32fb2e0e6a9824d0df9}
+2016-01-06 14:20:57,537 INFO  [Thread-0] root: server:{127.0.0.1,50006,8fde0784e948d32fb2e0e6a9824d0df9,ea36ea4c34116912eddfd0a3e2faeedf}
+2016-01-06 14:23:15,785 INFO  [Thread-0] root: server:{127.0.0.1,50004,00000000000000000000000000000000,ffffffffffffffffffffffffffffffff}
+2016-01-06 14:23:32,975 INFO  [Thread-0] root: /127.0.0.1 37787 is connected
+2016-01-06 14:23:32,979 INFO  [Thread-0] root: Send message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 00000000000000000000000000000000 ffffffffffffffffffffffffffffffff}<}
+'
+2016-01-06 14:23:32,979 INFO  [Thread-0] root: Received message:	 '{StatusType: RECEIVED, port: 50004}'
+2016-01-06 14:23:37,329 INFO  [Thread-2] root: Send message:	 '{StatusType: START}
+'
+2016-01-06 14:23:46,931 INFO  [Thread-3] root: Send message:	 '{StatusType: SHUTDOWN}
+'

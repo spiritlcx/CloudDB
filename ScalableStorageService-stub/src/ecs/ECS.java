@@ -26,27 +26,17 @@ public class ECS {
 
 	final private Logger logger = Logger.getRootLogger();
 	private Metadata metadata = new Metadata();
-	public static String start = "00000000000000000000000000000000";
-	public static String end = "ffffffffffffffffffffffffffffffff";
 	private ServerSocket ecsServer;
 	DatagramSocket detectorServer;
 	boolean running;
 	
 	private HashMap<String, ServerConnection> hashthreads = new HashMap<String, ServerConnection>();
-	private ConsistentHashing conHashing;
 
 	private TreeMap<String, Server> workingservers = new TreeMap<String, Server>();
 	private ArrayList<Server> idleservers = new ArrayList<Server>();
 	
 	public ECS(){
-		try {
-			running = true;
-			conHashing = new ConsistentHashing();
-
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		running = true;
 	}
 	
 	/**
@@ -79,7 +69,7 @@ public class ECS {
 							
 							if(ipport.length == 2){
 
-								String hashedkey = conHashing.getHashedKey(ipport[0] + ipport[1]);
+								String hashedkey = ConsistentHashing.getHashedKey(ipport[0] + ipport[1]);
 								
 								Server toremove = workingservers.get(hashedkey);
 								if(toremove != null){
@@ -95,6 +85,7 @@ public class ECS {
 									for(ServerConnection connection : hashthreads.values()){
 										connection.update(metadata);
 									}
+									addNode(10, "FIFO");
 								}
 							}
 							
@@ -119,12 +110,8 @@ public class ECS {
 			try {
 				while((line = reader.readLine()) != null){
 					String [] node = line.split(" ");
-					if(node != null && node.length == 3){
-						Server server = new Server();
-						server.ip = node[1];
-						server.port = node[2];
-
-						idleservers.add(server);
+					if(node.length == 3){
+						idleservers.add(new Server(node[1], node[2]));
 					}
 				}
 				reader.close();
@@ -141,37 +128,13 @@ public class ECS {
 
 				Random random = new Random();
 				for(int i = 0; i < numberOfNodes; i++){
-					int server = random.nextInt(idleservers.size());
-					conHashing.add(idleservers.get(server));
-					idleservers.remove(server);
+					int index = random.nextInt(idleservers.size());
+					metadata.add(idleservers.get(index));
+					idleservers.remove(index);
 				}
 				
-				workingservers = conHashing.getServers();
+				workingservers = metadata.getServers();
 
-				//After receiving servers with hashed keys, it will know how to map keys to
-				//each server with the range (from, to) in each server, and store the information
-				//in metadata which will be used by both client and server
-
-
-				for(String key : workingservers.keySet()){
-					if(workingservers.size() == 1){
-						workingservers.get(key).from = start;
-						workingservers.get(key).to = end;
-						break;
-					}
-					
-					
-					workingservers.get(key).to = key;
-
-					String formerkey = workingservers.lowerKey(key);
-
-					if(formerkey == null){
-						formerkey = workingservers.lastKey();
-					}
-					workingservers.get(key).from = workingservers.get(formerkey).hashedkey;					
-				}
-
-				metadata.set(workingservers);
 				
 				for(Server server : workingservers.values()){
 					logger.info(server);
@@ -282,8 +245,8 @@ public class ECS {
 		
 				if(idleservers.size() != 0){
 					Server newworkingserver = getRandomNode();
-					
-					Server successor = metadata.putServer(newworkingserver);
+					metadata.add(newworkingserver);
+					Server successor = metadata.getSuccessor(newworkingserver.hashedkey);
 		
 					try {
 						Socket kvserver = null;
@@ -344,13 +307,11 @@ public class ECS {
 				hashthreads.get(successor.hashedkey).receiveData();
 				hashthreads.get(toRemove.hashedkey).moveData(toRemove.from, toRemove.to, successor.ip, Integer.parseInt(successor.to)-20);
 				
-				KVAdminMessage moveFinished = new KVAdminMessage(hashthreads.get(toRemove.hashedkey).getInput());
-				moveFinished = moveFinished.deserialize(moveFinished.getMsg());
-				if(moveFinished.getStatusType() == StatusType.MOVEFINISH){
-					for(ServerConnection connection : hashthreads.values()){
-						connection.update(metadata);
-					}
+
+				for(ServerConnection connection : hashthreads.values()){
+					connection.update(metadata);
 				}
+
 	
 				hashthreads.get(toRemove.hashedkey).shutDown();
 				
@@ -433,7 +394,7 @@ public class ECS {
 		logger.info("The server with ip:"+newworkingserver.ip + " and port:"+newworkingserver.port + " is picked as a new node");
 
 		//Recalculate and update the meta­data of the storage service
-		newworkingserver.hashedkey = conHashing.getHashedKey(newworkingserver.ip + newworkingserver.port);
+		newworkingserver.hashedkey = ConsistentHashing.getHashedKey(newworkingserver.ip + newworkingserver.port);
 		workingservers.put(newworkingserver.hashedkey, newworkingserver);
 		idleservers.remove(newworkingserver);
 

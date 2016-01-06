@@ -91,3 +91,91 @@
 2016-01-06 12:57:36,117 ERROR [Thread-4] root: 
 2016-01-06 12:57:36,913 ERROR [Thread-3] root: 
 2016-01-06 12:57:36,913 ERROR [Thread-4] root: 
+2016-01-06 13:55:46,273 INFO  [main] root: Initialize server ...
+2016-01-06 13:55:46,283 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50002}
+'
+2016-01-06 13:55:46,284 INFO  [main] root: Server listening on port: 50002
+2016-01-06 13:55:46,285 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}'
+2016-01-06 13:55:52,401 INFO  [main] root: Initialize server ...
+2016-01-06 13:55:52,410 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50004}
+'
+2016-01-06 13:55:52,410 INFO  [main] root: Server listening on port: 50004
+2016-01-06 13:55:52,412 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}'
+2016-01-06 13:55:57,425 INFO  [main] root: Initialize server ...
+2016-01-06 13:55:57,438 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50005}
+'
+2016-01-06 13:55:57,438 INFO  [main] root: Server listening on port: 50005
+2016-01-06 13:55:57,443 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}'
+2016-01-06 13:56:00,237 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
+2016-01-06 13:56:00,237 INFO  [main] root: start to serve
+2016-01-06 13:56:00,241 INFO  [Thread-0] root: The server is started
+2016-01-06 13:56:00,243 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
+2016-01-06 13:56:00,243 INFO  [main] root: start to serve
+2016-01-06 13:56:00,243 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
+2016-01-06 13:56:00,246 INFO  [main] root: start to serve
+2016-01-06 13:56:00,251 INFO  [Thread-0] root: The server is started
+2016-01-06 13:56:00,255 INFO  [Thread-0] root: The server is started
+2016-01-06 13:56:10,850 INFO  [main] root: Connected to localhost on port 35927
+2016-01-06 13:56:10,850 INFO  [main] root: start to serve
+2016-01-06 13:56:10,851 INFO  [Thread-6] root: Send message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50002
+'
+2016-01-06 13:56:13,257 INFO  [Thread-6] root: Received message:	 '{StatusType: PUT, key:aa, value:bb}'
+2016-01-06 13:56:13,259 INFO  [Thread-6] root: Send message:	 '{StatusType: SERVER_NOT_RESPONSIBLE, key:aa, metadata:{127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}
+'
+2016-01-06 13:56:13,281 ERROR [Thread-6] root: Error! Connection lost!
+2016-01-06 13:56:13,284 INFO  [main] root: Connected to localhost on port 40445
+2016-01-06 13:56:13,284 INFO  [main] root: start to serve
+2016-01-06 13:56:13,285 INFO  [Thread-6] root: Send message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50005
+'
+2016-01-06 13:56:13,285 INFO  [Thread-6] root: Received message:	 '{StatusType: PUT, key:aa, value:bb}'
+2016-01-06 13:56:13,286 INFO  [Thread-6] root: Send message:	 '{StatusType: PUT, key:aa, value:bb}
+'
+2016-01-06 13:56:13,286 INFO  [Thread-4] root: Received message:	 '{StatusType: PUT, key:aa, value:bb}'
+2016-01-06 13:56:13,286 INFO  [Thread-5] root: Received message:	 '{StatusType: PUT, key:aa, value:bb}'
+2016-01-06 13:56:13,288 INFO  [Thread-6] root: Send message:	 '{StatusType: PUT, key:aa, value:bb}
+'
+2016-01-06 13:56:13,288 INFO  [Thread-6] root: Send message:	 '{StatusType: PUT_SUCCESS, key:aa, value:bb}
+'
+2016-01-06 13:56:24,951 ERROR [Thread-6] root: Error! Connection lost!
+2016-01-06 13:56:24,957 INFO  [main] root: Connected to localhost on port 35931
+2016-01-06 13:56:24,957 INFO  [main] root: start to serve
+2016-01-06 13:56:24,961 INFO  [Thread-7] root: Send message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50002
+'
+2016-01-06 13:56:24,962 INFO  [Thread-7] root: Received message:	 '{StatusType: PUT, key:kk, value:ll}'
+2016-01-06 13:56:24,965 INFO  [Thread-4] root: Received message:	 '{StatusType: PUT, key:kk, value:ll}'
+2016-01-06 13:56:24,966 INFO  [Thread-7] root: Send message:	 '{StatusType: PUT, key:kk, value:ll}
+'
+2016-01-06 13:56:24,967 INFO  [Thread-4] root: Received message:	 '{StatusType: PUT, key:kk, value:ll}'
+2016-01-06 13:56:24,968 INFO  [Thread-7] root: Send message:	 '{StatusType: PUT, key:kk, value:ll}
+'
+2016-01-06 13:56:24,969 INFO  [Thread-7] root: Send message:	 '{StatusType: PUT_SUCCESS, key:kk, value:ll}
+'
+2016-01-06 13:56:28,180 INFO  [Thread-7] root: Received message:	 '{StatusType: GET, key:aa}'
+2016-01-06 13:56:28,181 INFO  [Thread-7] root: Send message:	 '{StatusType: GET_SUCCESS, key:aa, value:bb}
+'
+2016-01-06 13:56:30,051 INFO  [Thread-7] root: Received message:	 '{StatusType: GET, key:kk}'
+2016-01-06 13:56:30,052 INFO  [Thread-7] root: Send message:	 '{StatusType: GET_SUCCESS, key:kk, value:ll}
+'
+2016-01-06 13:56:46,134 ERROR [Thread-4] root: 
+2016-01-06 13:56:46,134 ERROR [Thread-5] root: 
+2016-01-06 13:56:46,726 ERROR [Thread-4] root: 
+2016-01-06 14:23:32,968 INFO  [main] root: Initialize server ...
+2016-01-06 14:23:32,977 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50004}
+'
+2016-01-06 14:23:32,983 INFO  [main] root: Server listening on port: 50004
+2016-01-06 14:23:32,984 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 00000000000000000000000000000000 ffffffffffffffffffffffffffffffff}<}'
+2016-01-06 14:23:37,327 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
+2016-01-06 14:23:37,329 INFO  [main] root: start to serve
+2016-01-06 14:23:37,331 INFO  [Thread-0] root: The server is started
+2016-01-06 14:23:46,930 INFO  [Thread-0] root: Received message:	 '{StatusType: SHUTDOWN}'
+2016-01-06 14:23:46,931 INFO  [Thread-0] root: The server is shutdown
+2016-01-06 14:23:46,931 ERROR [main] root: Error! Unable to establish connection. 
+
+java.net.SocketException: Socket closed
+	at java.net.PlainSocketImpl.socketAccept(Native Method)
+	at java.net.AbstractPlainSocketImpl.accept(AbstractPlainSocketImpl.java:409)
+	at java.net.ServerSocket.implAccept(ServerSocket.java:545)
+	at java.net.ServerSocket.accept(ServerSocket.java:513)
+	at app_KvServer.KVServer.run(KVServer.java:116)
+	at app_KvServer.KVServer.main(KVServer.java:527)
+2016-01-06 14:23:46,935 INFO  [main] root: Server stopped.

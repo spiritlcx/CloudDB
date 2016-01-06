@@ -48,7 +48,6 @@ public class KVServer{
     private Persistance persistance;
     private Metadata metadata;
         
-	private ConsistentHashing conHashing;
 	private StorageManager storageManager;
 
 	private MessageHandler [] successors = new MessageHandler[2];
@@ -68,12 +67,8 @@ public class KVServer{
 	public KVServer() {
 		try {
 			new LogSetup("logs/server.log", Level.ALL);
-			conHashing = new ConsistentHashing();
 
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -101,7 +96,7 @@ public class KVServer{
 		};
 		messageReceiver.start();
 
-        if(serverSocket != null) {
+        if(!serverSocket.isClosed()) {
 	        while(!shutdown){
 				try {
 					synchronized(running){
@@ -208,7 +203,7 @@ public class KVServer{
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				logger.error(e);
-//				shutdown = true;
+
 				return;
 			}
 		}
@@ -378,7 +373,7 @@ public class KVServer{
 
 		synchronized(keyvalue){
 			for(String key : keyvalue.keySet()){
-				String hashedkey= conHashing.getHashedKey(key);
+				String hashedkey= ConsistentHashing.getHashedKey(key);
 				
 				if(to.compareTo(from) < 0){
 					if(hashedkey.compareTo(from) > 0 || hashedkey.compareTo(to) < 0){
@@ -499,7 +494,7 @@ public class KVServer{
      * @return two successor server, can be null
      */
     private void updateSuccessors(){
-    	Server successor = metadata.getSuccessor(conHashing.getHashedKey("127.0.0.1" + port));
+    	Server successor = metadata.getSuccessor(ConsistentHashing.getHashedKey("127.0.0.1" + port));
     	
     	if(successor != null){
     		try {
@@ -510,7 +505,7 @@ public class KVServer{
 				logger.error(e.getMessage());
 			}
     		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
-    		if(!sesuccessor.hashedkey.equals(conHashing.getHashedKey("127.0.0.1" + port))){
+    		if(!sesuccessor.hashedkey.equals(ConsistentHashing.getHashedKey("127.0.0.1" + port))){
     			try{
     				Socket sesuccessorSocket= new Socket(sesuccessor.ip, Integer.parseInt(sesuccessor.port)+20);
     				successors[1] = new MessageHandler(sesuccessorSocket.getInputStream(), sesuccessorSocket.getOutputStream(), logger);
@@ -529,7 +524,7 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-			kvserver.run(50007);
+			kvserver.run(50004);
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");

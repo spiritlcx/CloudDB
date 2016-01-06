@@ -1,0 +1,28 @@
+2016-01-06 13:56:10,851 INFO  [main] root: Received message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50002'
+2016-01-06 13:56:10,852 INFO  [main] root: Connection established
+2016-01-06 13:56:13,256 INFO  [main] root: Send message:	 '{StatusType: PUT, key:aa, value:bb}
+'
+2016-01-06 13:56:13,260 INFO  [main] root: Received message:	 '{StatusType: SERVER_NOT_RESPONSIBLE, key:aa, metadata:{127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}'
+2016-01-06 13:56:13,280 WARN  [main] root: Metadata stale! Metadata was updated!
+2016-01-06 13:56:13,281 INFO  [main] root: Trying to close connection ...
+2016-01-06 13:56:13,281 INFO  [main] root: Tearing down the connection ...
+2016-01-06 13:56:13,281 INFO  [main] root: Connection closed!
+2016-01-06 13:56:13,284 INFO  [main] root: Received message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50005'
+2016-01-06 13:56:13,284 INFO  [main] root: Connection established
+2016-01-06 13:56:13,285 INFO  [main] root: Send message:	 '{StatusType: PUT, key:aa, value:bb}
+'
+2016-01-06 13:56:13,289 INFO  [main] root: Received message:	 '{StatusType: PUT_SUCCESS, key:aa, value:bb}'
+2016-01-06 13:56:24,950 INFO  [main] root: Trying to close connection ...
+2016-01-06 13:56:24,950 INFO  [main] root: Tearing down the connection ...
+2016-01-06 13:56:24,950 INFO  [main] root: Connection closed!
+2016-01-06 13:56:24,958 INFO  [main] root: Received message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50002'
+2016-01-06 13:56:24,958 INFO  [main] root: Connection established
+2016-01-06 13:56:24,958 INFO  [main] root: Send message:	 '{StatusType: PUT, key:kk, value:ll}
+'
+2016-01-06 13:56:24,968 INFO  [main] root: Received message:	 '{StatusType: PUT_SUCCESS, key:kk, value:ll}'
+2016-01-06 13:56:28,180 INFO  [main] root: Send message:	 '{StatusType: GET, key:aa}
+'
+2016-01-06 13:56:28,181 INFO  [main] root: Received message:	 '{StatusType: GET_SUCCESS, key:aa, value:bb}'
+2016-01-06 13:56:30,051 INFO  [main] root: Send message:	 '{StatusType: GET, key:kk}
+'
+2016-01-06 13:56:30,052 INFO  [main] root: Received message:	 '{StatusType: GET_SUCCESS, key:kk, value:ll}'

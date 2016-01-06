@@ -14,23 +14,17 @@ import java.util.TreeMap;
  */
 
 public class ConsistentHashing {
-	private TreeMap<String, Server> servers = new TreeMap<String, Server>();
-	private MessageDigest md;
 
-	public ConsistentHashing() throws NoSuchAlgorithmException{
-		md  = MessageDigest.getInstance("MD5");
-	}
-	
-	public void add(Server server){
-		server.hashedkey = getHashedKey(server.ip + server.port);
-		servers.put(server.hashedkey, server);
-	}
-	
-	public TreeMap getServers(){
-		return servers;
-	}
-	
-	public String getHashedKey(String key){
+	private static MessageDigest md;
+
+	public static String getHashedKey(String key){
+		try {
+			md  = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 		md.reset();
 		md.update((key).getBytes());
 		byte[] result = md.digest();

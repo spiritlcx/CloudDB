@@ -3,21 +3,21 @@ package metadata;
 import java.io.Serializable;
 import java.util.TreeMap;
 
+import ecs.ConsistentHashing;
 import ecs.ECS;
 import ecs.Server;
 
 public class Metadata implements Serializable{
 
 	private TreeMap<String, Server> servers = new TreeMap<String, Server>();
+	public static String start = "00000000000000000000000000000000";
+	public static String end = "ffffffffffffffffffffffffffffffff";
 
+	
 	public TreeMap<String, Server> getServers(){
 		return servers;
 	}
 	
-	public void add(Server server){
-		servers.put(server.hashedkey, server);
-	}
-
 	public void set(TreeMap<String, Server> servers){
 		this.servers = servers;
 	}
@@ -47,7 +47,16 @@ public class Metadata implements Serializable{
 		return servers.size();
 	}
 	
-	public Server putServer(Server server){
+	public void add(Server server){
+
+		server.hashedkey = ConsistentHashing.getHashedKey(server.ip + server.port);
+
+		if(servers.size() == 0){
+			server.from = start;
+			server.to = end;
+			servers.put(server.hashedkey, server);
+			return;
+		}
 		
 		Server successor = null;
 		
@@ -56,23 +65,19 @@ public class Metadata implements Serializable{
 			server.from = successor.hashedkey;
 			
 			successor.to = successor.hashedkey;
-		}
-		
-		if(servers.higherKey(server.hashedkey) !=null){
-			successor = servers.get(servers.higherKey(server.hashedkey));
-			server.from = successor.from;
-						
 		}else{
-			successor = servers.get(servers.firstEntry().getKey());
-			server.from = successor.from;	
+			if(servers.higherKey(server.hashedkey) != null){
+				successor = servers.get(servers.higherKey(server.hashedkey));							
+			}else{
+				successor = servers.get(servers.firstEntry().getKey());
+			}
+			server.from = successor.from;
 		}
-
 		successor.from = server.hashedkey;
 		server.to = server.hashedkey;
 		
 		servers.put(server.hashedkey, server);
 
-		return successor;
 	}
 	
 	/**
@@ -101,8 +106,8 @@ public class Metadata implements Serializable{
 
 		if(servers.size() == 2){
 			servers.remove(toRemove.hashedkey);
-			servers.firstEntry().getValue().from = ECS.start;
-			servers.firstEntry().getValue().to = ECS.end;
+			servers.firstEntry().getValue().from = start;
+			servers.firstEntry().getValue().to = end;
 
 			return servers.firstEntry().getValue();
 		}

@@ -75,14 +75,8 @@ public class AdditionalTest extends TestCase {
 	public void testHashing(){
 		ConsistentHashing hashing;
 		String hashedKey = null;
-		try {
-			hashing = new ConsistentHashing();
-			hashedKey = hashing.getHashedKey("Test");
-
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		hashedKey = ConsistentHashing.getHashedKey("Test");
+		
 		assertTrue(hashedKey.equals("0cbc6611f5540bd0809a388dc95a615b"));
 	}
 
