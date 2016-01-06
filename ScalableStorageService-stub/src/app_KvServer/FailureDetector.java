@@ -34,7 +34,7 @@ public class FailureDetector extends Thread{
 	
 	class T{
 		private static final double gossip = 2000;
-		private static final double fail = 4000;
+		private static final double fail = 12000;
 		private static final double cleanup = 2*fail;
 		private static final double unit = 1000;
 	}
@@ -90,6 +90,8 @@ public class FailureDetector extends Thread{
 									ipaddress = InetAddress.getByName("127.0.0.1");
 									DatagramPacket sendPacket = new DatagramPacket(content.getBytes(),content.getBytes().length, ipaddress, 20000);
 									server.send(sendPacket);
+									System.out.println(member.port + " has failed");
+
 								} catch (UnknownHostException e) {
 									// TODO Auto-generated catch block
 									e.printStackTrace();
@@ -183,9 +185,9 @@ public class FailureDetector extends Thread{
 				
 			}
 
-			DatagramPacket sendPacket = new DatagramPacket(this.members.toString().getBytes(), this.members.toString().getBytes().length, ipaddress, port);
-			
-			System.out.println(self.port + ":  " + this.members.toString());
+			DatagramPacket sendPacket = new DatagramPacket(this.members.toString().getBytes(), 0, this.members.toString().getBytes().length, ipaddress, port);
+
+//			System.out.println(this.members.toString());
 			
 			server.send(sendPacket);
 
@@ -217,26 +219,51 @@ public class FailureDetector extends Thread{
 			failureDetector.add("127.0.0.1", 40001);
 			failureDetector.add("127.0.0.1", 40002);
 			failureDetector.add("127.0.0.1", 40003);
+			failureDetector.add("127.0.0.1", 40004);
+			failureDetector.add("127.0.0.1", 40005);
 			
 			FailureDetector failureDetector1 = new FailureDetector("127.0.0.1", 40001);
 			failureDetector1.add("127.0.0.1", 40000);
 			failureDetector1.add("127.0.0.1", 40002);
 			failureDetector1.add("127.0.0.1", 40003);
+			failureDetector1.add("127.0.0.1", 40004);
+			failureDetector1.add("127.0.0.1", 40005);
 
 			FailureDetector failureDetector2 = new FailureDetector("127.0.0.1", 40002);
 			failureDetector2.add("127.0.0.1", 40000);
 			failureDetector2.add("127.0.0.1", 40001);
 			failureDetector2.add("127.0.0.1", 40003);
+			failureDetector2.add("127.0.0.1", 40004);
+			failureDetector2.add("127.0.0.1", 40005);
 
 			FailureDetector failureDetector3 = new FailureDetector("127.0.0.1", 40003);
 			failureDetector3.add("127.0.0.1", 40000);
 			failureDetector3.add("127.0.0.1", 40001);
 			failureDetector3.add("127.0.0.1", 40002);
+			failureDetector3.add("127.0.0.1", 40004);
+			failureDetector3.add("127.0.0.1", 40005);
 
+			FailureDetector failureDetector4 = new FailureDetector("127.0.0.1", 40004);
+			failureDetector4.add("127.0.0.1", 40000);
+			failureDetector4.add("127.0.0.1", 40001);
+			failureDetector4.add("127.0.0.1", 40002);
+			failureDetector4.add("127.0.0.1", 40003);
+			failureDetector4.add("127.0.0.1", 40005);
+
+			FailureDetector failureDetector5 = new FailureDetector("127.0.0.1", 40005);
+			failureDetector5.add("127.0.0.1", 40000);
+			failureDetector5.add("127.0.0.1", 40001);
+			failureDetector5.add("127.0.0.1", 40002);
+			failureDetector5.add("127.0.0.1", 40003);
+			failureDetector5.add("127.0.0.1", 40004);
+
+			
 			failureDetector.start();
 			failureDetector1.start();
 			failureDetector2.start();
 			failureDetector3.start();
+			failureDetector4.start();
+			failureDetector5.start();
 
 			try{
 				Thread.sleep(10000);

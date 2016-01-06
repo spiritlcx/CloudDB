@@ -173,8 +173,9 @@ public class KVServer{
 					String from = message.getFrom();
 					String to = message.getTo();
 					String ip = message.getIp();
+					int port = message.getPort();
 					
-					toRemove = moveData(from, to, ip);
+					toRemove = moveData(from, to, ip, port);
 					replicationManager.removeRepSesuccessor(toRemove);
 					break;
 				case RECEIVE:
@@ -362,19 +363,19 @@ public class KVServer{
      */
 
     
-    public ArrayList<String> moveData(String from, String to, String ip) throws UnknownHostException, IOException{    	
+    public ArrayList<String> moveData(String from, String to, String ip, int port) throws UnknownHostException, IOException{    	
 
 		ArrayList<String> toRemove = new ArrayList<String>();
 
     	KVAdminMessage dataMessage = new KVAdminMessage();
 		dataMessage.setStatusType(StatusType.DATA);
 		
-		Socket moveSender = new Socket(ip, 30000);
+		Socket moveSender = new Socket(ip, port);
 				
 		MessageHandler senderHandler = new MessageHandler(moveSender.getInputStream(), moveSender.getOutputStream(), logger);
 		
 		String data = "";
-		
+
 		synchronized(keyvalue){
 			for(String key : keyvalue.keySet()){
 				String hashedkey= conHashing.getHashedKey(key);
@@ -418,7 +419,7 @@ public class KVServer{
     }
     
     public HashMap<String, String> receiveData() throws IOException{
-		serverMove = new ServerSocket(30000);
+		serverMove = new ServerSocket(port-20);
 
 		KVAdminMessage preparedMessage = new KVAdminMessage();
 		preparedMessage.setStatusType(StatusType.PREPARED);
@@ -438,24 +439,28 @@ public class KVServer{
 		
 		if(receivedData.getStatusType() == StatusType.DATA){
 			String datamsg = receivedData.getData();
-			
-			String [] pairs = datamsg.split(":");
 
-			for(String pair : pairs){
-				String[] kvpair = pair.split(" ");
-				if(kvpair.length == 2){
-					receivedPairs.put(kvpair[0], kvpair[1]);
-					if(keyvalue.size() < cacheSize){
-						synchronized(keyvalue){
-							keyvalue.put(kvpair[0], kvpair[1]);
+			if(datamsg.contains(":")){
+				String [] pairs = datamsg.split(":");
+	
+				for(String pair : pairs){
+					String[] kvpair = pair.split(" ");
+					if(kvpair.length == 2){
+						receivedPairs.put(kvpair[0], kvpair[1]);
+						if(keyvalue.size() < cacheSize){
+							synchronized(keyvalue){
+								keyvalue.put(kvpair[0], kvpair[1]);
+							}
+						}else{
+							persistance.store(kvpair[0], kvpair[1]);
 						}
-					}else{
-						persistance.store(kvpair[0], kvpair[1]);
 					}
 				}
+			   	logger.info(pairs.length + " key value pairs are received");
+			}else{
+			   	logger.info("0 key value pairs are received");
+				
 			}
-		   	logger.info(pairs.length + " key value pairs are received");
-
 		}else{
 			logger.error("Format of received data is not correct");
 		}
@@ -523,7 +528,7 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-			kvserver.run(50004);
+			kvserver.run(50006);
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");

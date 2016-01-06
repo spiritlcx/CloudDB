@@ -21,6 +21,17 @@ public class Metadata implements Serializable{
 	public void set(TreeMap<String, Server> servers){
 		this.servers = servers;
 	}
+
+	public Server getPredecessor(String hashedkey){
+		
+		if(servers.size() == 1)
+			return null;
+		if(hashedkey.equals(servers.firstKey())){
+			return servers.lastEntry().getValue();
+		}else{
+			return servers.get(servers.lowerKey(hashedkey));
+		}
+	}
 	
 	public Server getSuccessor(String hashedkey){
 		if(servers.size() == 1)
@@ -84,27 +95,27 @@ public class Metadata implements Serializable{
 	public Server remove(Server toRemove){
 		
 		if(servers.size() == 1){
-			servers.remove(toRemove);
+			servers.remove(toRemove.hashedkey);
 			return null;
 		}
 
 		if(servers.size() == 2){
-			servers.remove(toRemove);
+			servers.remove(toRemove.hashedkey);
 			servers.firstEntry().getValue().from = ECS.start;
 			servers.firstEntry().getValue().to = ECS.end;
 
 			return servers.firstEntry().getValue();
 		}
 
-		
+
 		if(toRemove.hashedkey.equals(servers.lastKey())){
 			servers.firstEntry().getValue().from = toRemove.from;
-			servers.remove(toRemove);
+			servers.remove(toRemove.hashedkey);
 			return servers.firstEntry().getValue();
 		}else{
 			Server successor = servers.get(servers.higherKey(toRemove.hashedkey));
 			successor.from = toRemove.from;
-			servers.remove(toRemove);
+			servers.remove(toRemove.hashedkey);
 			return successor;
 		}		
 	}

@@ -12,7 +12,7 @@ import common.messages.MessageHandler;
 import metadata.Metadata;
 import common.messages.KVAdminMessage.StatusType;
 
-public class ServerConnection extends Thread{
+public class ServerConnection{
 	private MessageHandler messageHandler;
 	private int cacheSize;
 	private String displacementStrategy;
@@ -38,9 +38,10 @@ public class ServerConnection extends Thread{
 	
 	/**
 	 * Sends initialization message to the KVServer.
+	 * @return 
 	 */
-	@Override
-	public void run(){
+
+	public int init(){
 		KVAdminMessage initMessage = new KVAdminMessage();
 		initMessage.setCacheSize(cacheSize);
 		initMessage.setDisplacementStrategy(displacementStrategy);
@@ -49,9 +50,16 @@ public class ServerConnection extends Thread{
 
 		try {
 			messageHandler.sendMessage(initMessage.serialize().getMsg());
+			
+			byte [] b =messageHandler.receiveMessage();
+			KVAdminMessage portMessage = new KVAdminMessage();
+			portMessage = portMessage.deserialize(new String(b));
+			return portMessage.getPort();
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return -1;
 		}
 	}
 	
@@ -123,13 +131,21 @@ public class ServerConnection extends Thread{
 
 		try {
 			messageHandler.sendMessage(receiveMessage.serialize().getMsg());
+			
+			byte [] b =messageHandler.receiveMessage();
+			KVAdminMessage preparedMessage = new KVAdminMessage();
+			preparedMessage = preparedMessage.deserialize(new String(b));
+			if(preparedMessage.getStatusType() == StatusType.PREPARED){
+				
+			}
+			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}		
 	}
 	
-	public void moveData(String from, String to, String ip){
+	public void moveData(String from, String to, String ip, int port){
 		try {
 
 
@@ -138,7 +154,18 @@ public class ServerConnection extends Thread{
 			moveMessage.setFrom(from);
 			moveMessage.setTo(to);
 			moveMessage.setIp(ip);
+			moveMessage.setPort(port);
+			
 			messageHandler.sendMessage(moveMessage.serialize().getMsg());
+
+			byte [] msg = messageHandler.receiveMessage();
+			KVAdminMessage moveFinished = new KVAdminMessage();
+			moveFinished = moveFinished.deserialize(new String(msg));
+			
+			if(moveFinished.getStatusType() == StatusType.MOVEFINISH){
+
+			}
+
 			
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block

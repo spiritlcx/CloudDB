@@ -41,6 +41,6 @@ public class ConsistentHashing {
 		 	n = result[i] & 0xF;
 		 	hashedkey += String.format("%1s", Integer.toHexString(n));
 		 }
-		return hashedkey;		
+		return hashedkey;
 	}
 }

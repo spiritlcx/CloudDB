@@ -32,7 +32,6 @@ public class ECS {
 	DatagramSocket detectorServer;
 	boolean running;
 	
-//	private TreeMap<String, Socket> hashservers = new TreeMap<String, Socket>();
 	private HashMap<String, ServerConnection> hashthreads = new HashMap<String, ServerConnection>();
 	private ConsistentHashing conHashing;
 
@@ -75,10 +74,28 @@ public class ECS {
 						try {
 							detectorServer.receive(receivePacket);
 							String failure = new String(receiveData);
+							failure = failure.trim();
 							String [] ipport = failure.split(" ");
 							
 							if(ipport.length == 2){
-								System.out.println(ipport[1] + " has failed");
+
+								String hashedkey = conHashing.getHashedKey(ipport[0] + ipport[1]);
+								
+								Server toremove = workingservers.get(hashedkey);
+								if(toremove != null){
+									hashthreads.remove(hashedkey);
+									idleservers.add(toremove);
+	
+									logger.info("server with ip:" + ipport[0] + " and port:" + ipport[1] + " has failed");
+	
+									handleFailure(toremove);
+									
+									workingservers.remove(hashedkey);
+									
+									for(ServerConnection connection : hashthreads.values()){
+										connection.update(metadata);
+									}
+								}
 							}
 							
 						} catch (IOException e) {
@@ -92,7 +109,6 @@ public class ECS {
 			// TODO Auto-generated catch block
 			logger.error("failure detector cannot be initialized");
 		}
-
 	}
 	
 	private void initServers(int numberOfNodes){
@@ -225,6 +241,26 @@ public class ECS {
 		running = false;
 	}
 	
+	public void handleFailure(Server server){
+		Server preServer = metadata.getPredecessor(server.hashedkey);
+		if(preServer != null){
+			Server sepreServer = metadata.getPredecessor(preServer.hashedkey);
+
+			Server suceServer = metadata.getSuccessor(server.hashedkey);
+			Server sesuceServer = metadata.getSuccessor(suceServer.hashedkey);
+			Server thsuceServer = metadata.getSuccessor(sesuceServer.hashedkey);
+			
+			hashthreads.get(suceServer.hashedkey).receiveData();
+			hashthreads.get(sesuceServer.hashedkey).receiveData();
+			hashthreads.get(thsuceServer.hashedkey).receiveData();
+			
+			hashthreads.get(preServer.hashedkey).moveData(preServer.from, preServer.to, suceServer.ip, Integer.parseInt(suceServer.port) - 20);
+			hashthreads.get(sepreServer.hashedkey).moveData(sepreServer.from, sepreServer.to, sesuceServer.ip, Integer.parseInt(sesuceServer.port) - 20);
+			hashthreads.get(suceServer.hashedkey).moveData(suceServer.from, suceServer.to, thsuceServer.ip, Integer.parseInt(thsuceServer.port) - 20);
+			
+		}
+	}
+	
 	 /* Create a new KVServer with the specified cache size and 
 	 * displacement strategy and add it to the storage service at an 
 	 * arbitrary position. 
@@ -237,16 +273,8 @@ public class ECS {
 			public void run(){
 		
 				if(idleservers.size() != 0){
-					Random random = new Random();
-					Server newworkingserver = idleservers.get(random.nextInt(idleservers.size()));
-
-					logger.info("The server with ip:"+newworkingserver.ip + " and port:"+newworkingserver.port + " is picked as a new node");
+					Server newworkingserver = getRandomNode();
 					
-					//Recalculate and update the meta­data of the storage service
-					newworkingserver.hashedkey = conHashing.getHashedKey(newworkingserver.ip + newworkingserver.port);
-					workingservers.put(newworkingserver.hashedkey, newworkingserver);
-					idleservers.remove(newworkingserver);
-		
 					Server successor = metadata.putServer(newworkingserver);
 		
 					try {
@@ -256,19 +284,12 @@ public class ECS {
 							ServerConnection connection = new ServerConnection(kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
 							hashthreads.put(newworkingserver.hashedkey, connection);
 				
-							connection.run();
-
-							byte [] b = connection.getInput();
-							KVAdminMessage msg = new KVAdminMessage();
-							msg = msg.deserialize(new String(b, "UTF-8"));
-							int receivedport = msg.getPort();
-
-							if(!(""+receivedport).equals(newworkingserver.port))
+							int port = connection.init();
+							if(port != Integer.parseInt(newworkingserver.port))
 								continue;
-							
 							connection.startServer();
 							connection.receiveData();
-							connection.getInput();
+
 							break;
 							
 //							}
@@ -282,16 +303,12 @@ public class ECS {
 					ServerConnection suserver = hashthreads.get(successor.hashedkey);
 					
 					suserver.setWriteLock();
-					suserver.moveData(newworkingserver.from, newworkingserver.to, newworkingserver.ip);
+					suserver.moveData(newworkingserver.from, newworkingserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.to) - 20);
 											
-					KVAdminMessage moveFinished = new KVAdminMessage(suserver.getInput());
-					moveFinished = moveFinished.deserialize(moveFinished.getMsg());
-					if(moveFinished.getStatusType() == StatusType.MOVEFINISH){
-						for(ServerConnection connection : hashthreads.values()){
-							connection.update(metadata);
-						}
+					for(ServerConnection connection : hashthreads.values()){
+						connection.update(metadata);
 					}
-		
+					
 					suserver.releaseWriteLock();
 				}
 			}
@@ -317,7 +334,7 @@ public class ECS {
 				hashthreads.get(successor.hashedkey).update(metadata);
 
 				hashthreads.get(successor.hashedkey).receiveData();
-				hashthreads.get(toRemove.hashedkey).moveData(toRemove.from, toRemove.to, successor.ip);
+				hashthreads.get(toRemove.hashedkey).moveData(toRemove.from, toRemove.to, successor.ip, Integer.parseInt(successor.to)-20);
 				
 				KVAdminMessage moveFinished = new KVAdminMessage(hashthreads.get(toRemove.hashedkey).getInput());
 				moveFinished = moveFinished.deserialize(moveFinished.getMsg());
@@ -375,22 +392,15 @@ public class ECS {
 					while(currentNode != numberOfNodes && (kvserver = ecsServer.accept()) != null){
 						logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");
 		
-						byte [] b = new byte[64];
-						KVAdminMessage msg = new KVAdminMessage();
-						kvserver.getInputStream().read(b);
-						msg = msg.deserialize(new String(b, "UTF-8"));
-						int receivedport = msg.getPort();
-		
+						ServerConnection connection = new ServerConnection (kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
+						int receivedport = connection.init();
 						
 						for(Server server : workingservers.values()){
 							
 							if( receivedport == Integer.parseInt(server.port) && 
 									kvserver.getInetAddress().toString().equals("/" + server.ip)){
-//								hashservers.put(server.hashedkey, kvserver);						
 	
-								ServerConnection connection = new ServerConnection (kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
 								hashthreads.put(server.hashedkey, connection);
-								connection.start();
 								currentNode++;
 		
 								break;
@@ -406,5 +416,19 @@ public class ECS {
 				}
 			}
 		}.start();
+	}
+	
+	private Server getRandomNode(){
+		Random random = new Random();
+		Server newworkingserver = idleservers.get(random.nextInt(idleservers.size()));
+
+		logger.info("The server with ip:"+newworkingserver.ip + " and port:"+newworkingserver.port + " is picked as a new node");
+
+		//Recalculate and update the meta­data of the storage service
+		newworkingserver.hashedkey = conHashing.getHashedKey(newworkingserver.ip + newworkingserver.port);
+		workingservers.put(newworkingserver.hashedkey, newworkingserver);
+		idleservers.remove(newworkingserver);
+
+		return newworkingserver;
 	}
 }

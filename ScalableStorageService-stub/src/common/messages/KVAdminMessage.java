@@ -76,7 +76,7 @@ public class KVAdminMessage extends Message{
 		case DATA:
 			return new KVAdminMessage("{StatusType: " + type + ", data: " + data + "}");
 		case MOVE:
-			return new KVAdminMessage("{StatusType: " + type + ", from: " + from + ", to: " + to + ", ip: " + ip + "}");
+			return new KVAdminMessage("{StatusType: " + type + ", from: " + from + ", to: " + to + ", ip: " + ip + ", port: " + port + "}");
 			
 		case UPDATE:
 			return new KVAdminMessage("{StatusType: " + type + ", metadata: " + metadata + "}");
