@@ -490,6 +490,7 @@ public class KVServer{
     public void update(Metadata metadata){
     	this.setMetadata(metadata);
     	updateSuccessors();
+    	
 		logger.info("metadata is updated: " + metadata);
     }
     
@@ -528,7 +529,7 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-			kvserver.run(50006);
+			kvserver.run(50007);
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");

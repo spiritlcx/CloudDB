@@ -242,23 +242,31 @@ public class ECS {
 	}
 	
 	public void handleFailure(Server server){
+		
+		if(workingservers.size() < 3)
+			return;
+		
 		Server preServer = metadata.getPredecessor(server.hashedkey);
-		if(preServer != null){
-			Server sepreServer = metadata.getPredecessor(preServer.hashedkey);
 
-			Server suceServer = metadata.getSuccessor(server.hashedkey);
-			Server sesuceServer = metadata.getSuccessor(suceServer.hashedkey);
-			Server thsuceServer = metadata.getSuccessor(sesuceServer.hashedkey);
-			
-			hashthreads.get(suceServer.hashedkey).receiveData();
-			hashthreads.get(sesuceServer.hashedkey).receiveData();
+		Server sepreServer = metadata.getPredecessor(preServer.hashedkey);
+
+		Server suceServer = metadata.getSuccessor(server.hashedkey);
+		Server sesuceServer = metadata.getSuccessor(suceServer.hashedkey);
+		Server thsuceServer = metadata.getSuccessor(sesuceServer.hashedkey);
+
+		hashthreads.get(suceServer.hashedkey).receiveData();
+		hashthreads.get(sesuceServer.hashedkey).receiveData();
+
+		hashthreads.get(preServer.hashedkey).moveData(preServer.from, preServer.to, suceServer.ip, Integer.parseInt(suceServer.port) - 20);
+		hashthreads.get(sepreServer.hashedkey).moveData(sepreServer.from, sepreServer.to, sesuceServer.ip, Integer.parseInt(sesuceServer.port) - 20);
+		
+		
+		// thsuceServer and suceServer is same when size is 4
+		if(workingservers.size() != 4){
 			hashthreads.get(thsuceServer.hashedkey).receiveData();
-			
-			hashthreads.get(preServer.hashedkey).moveData(preServer.from, preServer.to, suceServer.ip, Integer.parseInt(suceServer.port) - 20);
-			hashthreads.get(sepreServer.hashedkey).moveData(sepreServer.from, sepreServer.to, sesuceServer.ip, Integer.parseInt(sesuceServer.port) - 20);
 			hashthreads.get(suceServer.hashedkey).moveData(suceServer.from, suceServer.to, thsuceServer.ip, Integer.parseInt(thsuceServer.port) - 20);
-			
 		}
+			
 	}
 	
 	 /* Create a new KVServer with the specified cache size and 

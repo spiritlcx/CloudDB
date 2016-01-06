@@ -32,6 +32,10 @@ public class FailureDetector extends Thread{
 		members.add(ip, port);
 	}
 	
+	public void remove(String ip, int port){
+		members.remove(ip, port);
+	}
+	
 	class T{
 		private static final double gossip = 2000;
 		private static final double fail = 12000;
@@ -69,6 +73,15 @@ public class FailureDetector extends Thread{
 		}
 		public void add(String ip, int port){
 			members.add(new Member(ip, port));
+		}
+		public void remove(String ip, int port){
+			Iterator<Member> it = members.iterator();
+			while(it.hasNext()){
+				Member member = it.next();
+				if(member.ip.equals(ip) && member.port == port){
+					it.remove();
+				}
+			}
 		}
 		
 		public void update(Members newmembers){
