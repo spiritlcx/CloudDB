@@ -507,6 +507,13 @@ public class KVServer{
      */
     
     public void update(Metadata metadata){
+    	
+    	for(Server server : this.metadata.getServers().values()){
+    		if(!metadata.getServers().values().contains(server)){
+    			failureDetector.remove(server.ip, Integer.parseInt(server.port));
+    		}
+    	}
+    	
     	this.setMetadata(metadata);
     	updateSuccessors();
     	

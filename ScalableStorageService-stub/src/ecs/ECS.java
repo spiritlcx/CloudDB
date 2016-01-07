@@ -73,7 +73,6 @@ public class ECS {
 								String hashedkey = ConsistentHashing.getHashedKey(ipport[0] + ipport[1]);
 
 								if(hashthreads.remove(hashedkey) != null){
-
 									Server toremove = metadata.getServer(hashedkey);
 
 									logger.info("server with ip:" + ipport[0] + " and port:" + ipport[1] + " has failed");
@@ -233,31 +232,31 @@ public class ECS {
 	public void handleFailure(Server server){
 		idleservers.add(server);
 
-		if(metadata.size() <= 3)
-			return;
-		
-		Server preServer = metadata.getPredecessor(server.hashedkey);
-
-		Server sepreServer = metadata.getPredecessor(preServer.hashedkey);
-
-		Server suceServer = metadata.getSuccessor(server.hashedkey);
-		Server sesuceServer = metadata.getSuccessor(suceServer.hashedkey);
-		Server thsuceServer = metadata.getSuccessor(sesuceServer.hashedkey);
-
-		hashthreads.get(suceServer.hashedkey).receiveData();
-		hashthreads.get(sesuceServer.hashedkey).receiveData();
-
-		hashthreads.get(preServer.hashedkey).moveData(preServer.from, preServer.to, sesuceServer.ip, Integer.parseInt(sesuceServer.port) - 20);
-		hashthreads.get(sepreServer.hashedkey).moveData(sepreServer.from, sepreServer.to, suceServer.ip, Integer.parseInt(suceServer.port) - 20);
-				
-		// thsuceServer and suceServer is same when size is 4
-		if(metadata.size() != 4){
-			hashthreads.get(thsuceServer.hashedkey).receiveData();
-			hashthreads.get(suceServer.hashedkey).moveData(suceServer.from, suceServer.to, thsuceServer.ip, Integer.parseInt(thsuceServer.port) - 20);
+		//don't need to move data if the number of servers is less than or equal to 3
+		if(metadata.size() > 3){
+			Server preServer = metadata.getPredecessor(server.hashedkey);
+	
+			Server sepreServer = metadata.getPredecessor(preServer.hashedkey);
+	
+			Server suceServer = metadata.getSuccessor(server.hashedkey);
+			Server sesuceServer = metadata.getSuccessor(suceServer.hashedkey);
+			Server thsuceServer = metadata.getSuccessor(sesuceServer.hashedkey);
+	
+			hashthreads.get(suceServer.hashedkey).receiveData();
+			hashthreads.get(sesuceServer.hashedkey).receiveData();
+	
+			hashthreads.get(preServer.hashedkey).moveData(preServer.from, preServer.to, sesuceServer.ip, Integer.parseInt(sesuceServer.port) - 20);
+			hashthreads.get(sepreServer.hashedkey).moveData(sepreServer.from, sepreServer.to, suceServer.ip, Integer.parseInt(suceServer.port) - 20);
+					
+			// thsuceServer and suceServer is same when size is 4
+			if(metadata.size() != 4){
+				hashthreads.get(thsuceServer.hashedkey).receiveData();
+				hashthreads.get(suceServer.hashedkey).moveData(suceServer.from, suceServer.to, thsuceServer.ip, Integer.parseInt(thsuceServer.port) - 20);
+			}
 		}
 		
 		metadata.removeServer(server.hashedkey);
-		
+			
 		for(ServerConnection connection : hashthreads.values()){
 			connection.update(metadata);
 		}	
@@ -339,7 +338,9 @@ public class ECS {
 
 					}else if(metadata.getServers().size() == 3){
 						Server preserver = metadata.getPredecessor(newworkingserver.hashedkey);
-						hashthreads.get(preserver.hashedkey).moveData(preserver.from, preserver.to, preserver.ip, Integer.parseInt(preserver.port) - 20);
+
+						hashthreads.get(newworkingserver.hashedkey).receiveData();
+						hashthreads.get(preserver.hashedkey).moveData(preserver.from, preserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.port) - 20);
 					}
 
 					for(ServerConnection connection : hashthreads.values()){
@@ -358,10 +359,13 @@ public class ECS {
 	public void removeNode(){
 		Thread t = new Thread(){
 			public void run(){
-				hashthreads.get(metadata.getFirstServer().hashedkey).shutDown();
-				hashthreads.remove(metadata.getFirstServer().hashedkey);
-				logger.info(metadata.getFirstServer().port + " is removed");
-				handleFailure(metadata.getFirstServer());
+				Server toremove = metadata.getFirstServer();
+				hashthreads.get(toremove.hashedkey).shutDown();
+				hashthreads.remove(toremove.hashedkey);
+
+				logger.info(toremove.port + " is removed");
+				handleFailure(toremove);
+
 			}
 		};
 		t.start();

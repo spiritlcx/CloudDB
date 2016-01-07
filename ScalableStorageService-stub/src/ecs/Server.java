@@ -29,6 +29,8 @@ public class Server implements Comparator<Server>{
 	@Override
 	public int compare(Server o1, Server o2) {
 		// TODO Auto-generated method stub
+		if(o1.ip.equals(o2.ip) && o1.port.equals(o2.port))
+			return 0;
 		return o1.hashedkey.compareTo(o2.hashedkey);
 	}	
 	@Override
