@@ -94,8 +94,7 @@ public class ClientConnection implements Runnable {
 					
 					if(receivedMessage != null){
 						try{
-							if(KVServer.running.get() == true)
-								action(receivedMessage);
+							action(receivedMessage);
 						}catch(Exception e){
 							logger.error(e.getMessage());
 						}
@@ -141,8 +140,6 @@ public class ClientConnection implements Runnable {
 	private void action(TextMessage receivedMessage){
 		switch(receivedMessage.getStatus()){
 		case PUT:
-			if(KVServer.lock)
-				return;
 			put(receivedMessage.getKey(), receivedMessage.getValue());
 			break;
 		case GET:
@@ -157,27 +154,27 @@ public class ClientConnection implements Runnable {
 	private void put(String key, String value){
 		TextMessage sentMessage = new TextMessage();
 
-		if(key == null){
-			logger.error("No valid key value pair.");
-			return;
+		if(!KVServer.running.get()){
+			sentMessage.setStatusType(StatusType.SERVER_STOPPED);
+		}else if(KVServer.lock){
+			sentMessage.setStatusType(StatusType.SERVER_WRITE_LOCK);			
+		}else{		
+			String[] server = metadata.getServerForKey(key);
+	
+			if(server != null && server[0].equals("127.0.0.1") && server[1].equals("" + clientSocket.getLocalPort())){
+				StatusType type = storageManager.put(key, value);
+				sentMessage.setStatusType(type);
+				sentMessage.setKey(key);
+				sentMessage.setValue(value);
+				replicationManager.replicate(type, key, value);
+			}else{
+				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
+				sentMessage.setKey(key);
+				sentMessage.setValue(value);
+				sentMessage.setMetadata(metadata);
+			}
 		}
 		
-		String[] server = metadata.getServerForKey(key);
-
-		if(server != null && server[0].equals("127.0.0.1") && server[1].equals("" + clientSocket.getLocalPort())){
-			StatusType type = storageManager.put(key, value);
-			sentMessage.setStatusType(type);
-			sentMessage.setKey(key);
-			sentMessage.setValue(value);
-			replicationManager.replicate(type, key, value);
-		}
-		else{
-			sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
-			sentMessage.setKey(key);
-			sentMessage.setValue(value);
-			sentMessage.setMetadata(metadata);
-		}
-
 		try {
 			messageHandler.sendMessage(sentMessage.serialize().getMsg());
 		} 

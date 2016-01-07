@@ -6,7 +6,6 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -97,39 +96,35 @@ public class KVServer{
 		
 		messageReceiver.start();
 
-        if(!serverSocket.isClosed()) {
-	        while(!shutdown){
-				try {
-					synchronized(running){
-						while(!running.get())
-							running.wait();
-		            	logger.info("start to serve");
+        while(!shutdown){
+			try {
+				synchronized(running){
+					while(!running.get())
+						running.wait();
+	            	logger.info("start to serve");
 
-					}
-					
-				}catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
 				}
-	        	
-		            try {
+				
+			}catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 
-		                Socket client = serverSocket.accept();
-		                ClientConnection connection = 
-		                		new ClientConnection(client, serverSocket, keyvalue, cacheSize, strategy, persistance, metadata, successors);
-		               (new Thread(connection)).start();
-		                
-		                logger.info("Connected to " 
-		                		+ client.getInetAddress().getHostName() 
-		                		+  " on port " + client.getPort());
-		            } catch (IOException e) {
-		            	logger.error("Error! " +
-		            			"Unable to establish connection. \n", e);
-		            }
-	        }
-	        System.out.println("not running");
+			try {
+				Socket client = serverSocket.accept();
+               	ClientConnection connection = 
+                		new ClientConnection(client, serverSocket, keyvalue, cacheSize, strategy, persistance, metadata, successors);
+               (new Thread(connection)).start();
+                
+                logger.info("Connected to " 
+                		+ client.getInetAddress().getHostName() 
+                		+  " on port " + client.getPort());
+            } catch (IOException e) {
+            	logger.error("Error! " +
+            			"Unable to establish connection. \n", e);
+            }
         }
-        logger.info("Server stopped.");
+        System.out.println("not running");
     }
     
     /**
@@ -144,76 +139,81 @@ public class KVServer{
 					"Unable to close socket on port: " + port, e);
 		}
     }
-
 	
 	private void communicateECS(){
+		KVAdminMessage message = null;
 		while(!shutdown){
 			try {
 				byte [] b =ecsMsgHandler.receiveMessage();
 				
-				KVAdminMessage message = new KVAdminMessage(b);
+				message = new KVAdminMessage(b);
 				message = message.deserialize(new String(b, "UTF-8"));
-
-				ArrayList<String> toRemove = null;
-
-				switch(message.getStatusType()){
-				case INIT:{
-					Metadata meta = message.getMetadata();
-					int size = message.getCacheSize();
-					String stra = message.getDisplacementStrategy();
-
-					initKVServer(meta, size, stra);
-
-					break;
-				}
-				case MOVE:{
-					String from = message.getFrom();
-					String to = message.getTo();
-					String ip = message.getIp();
-					int port = message.getPort();
-					
-					toRemove = moveData(from, to, ip, port);
-					break;
-				}
-				case RECEIVE:
-					HashMap<String, String> receivedPairs = receiveData();
-					break;
-				case REMOVE:{
-					String from = message.getFrom();
-					String to = message.getTo();
-					storageManager.removeData(from, to);
-					break;
-				}
-				case SHUTDOWN:
-					shutDown();
-					break;
-				case START:
-					start();
-					break;
-				case STOP:
-					stop();
-					break;
-				case UPDATE:{
-					Metadata meta = message.getMetadata();
-					setMetadata(meta);
-					break;
-				}
-				case WRITELOCK:
-					lock = !lock;
-					if(lock == false && toRemove != null)
-						removeData(toRemove);
-					break;
-				default:
-					break;
-				
-				}
-								
-			} catch (IOException e) {
+			}catch (IOException e) {
 				// TODO Auto-generated catch block
+				shutDown();
 				logger.error(e);
 
 				return;
 			}
+
+			switch(message.getStatusType()){
+			case INIT:{
+				Metadata meta = message.getMetadata();
+				int size = message.getCacheSize();
+				String stra = message.getDisplacementStrategy();
+
+				initKVServer(meta, size, stra);
+
+				break;
+			}
+			case MOVE:{
+				String from = message.getFrom();
+				String to = message.getTo();
+				String ip = message.getIp();
+				int port = message.getPort();
+				
+				try {
+					moveData(from, to, ip, port);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			}
+			case RECEIVE:
+				try {
+					receiveData();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+			case REMOVE:{
+				String from = message.getFrom();
+				String to = message.getTo();
+				storageManager.removeData(from, to);
+				break;
+			}
+			case SHUTDOWN:
+				shutDown();
+				break;
+			case START:
+				start();
+				break;
+			case STOP:
+				stop();
+				break;
+			case UPDATE:{
+				Metadata meta = message.getMetadata();
+				setMetadata(meta);
+				break;
+			}
+			case WRITELOCK:
+				lock = !lock;
+				break;
+			default:
+				break;			
+			}								
 		}
 	}
     
@@ -243,22 +243,6 @@ public class KVServer{
 			logger.error(e.getMessage());
 			throw new Exception();
 		}
-    	
-    	try {
-            serverSocket = new ServerSocket(port);
-            logger.info("Server listening on port: " 
-            		+ serverSocket.getLocalPort());    
-        
-        } catch (IOException e) {
-        	logger.error("Error! Cannot open server socket:");
-            if(e instanceof BindException){
-            	logger.error("Port " + port + " is already bound!");
-            }
-			throw new Exception();
-        } catch (Exception e){
-        	logger.error(e.getMessage());
-			throw new Exception();
-        }
     }
     
     /**
@@ -310,13 +294,28 @@ public class KVServer{
      */
 
     public void start(){
+    	
+    	try {
+            serverSocket = new ServerSocket(port);
+            logger.info("Server listening on port: " 
+            		+ serverSocket.getLocalPort());    
+        
+        } catch (IOException e) {
+        	logger.error("Error! Cannot open server socket:");
+            if(e instanceof BindException){
+            	logger.error("Port " + port + " is already bound!");
+            }
+        }
+
+    	
     	synchronized(running){
     		running.set(true);
     		running.notifyAll();
     	}
 
 		updateSuccessors();
-		failureDetector.start();
+		if(!failureDetector.isAlive())
+			failureDetector.start();
 
     	logger.info("The server is started");
     }
@@ -329,6 +328,12 @@ public class KVServer{
     public void stop(){
     	running.set(false);
     	logger.info("The server is stopped");
+    	try {
+			serverSocket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
     
     /**
@@ -374,9 +379,7 @@ public class KVServer{
      */
 
     
-    private ArrayList<String> moveData(String from, String to, String ip, int port) throws UnknownHostException, IOException{    	
-
-		ArrayList<String> toRemove = new ArrayList<String>();
+    private void moveData(String from, String to, String ip, int port) throws UnknownHostException, IOException{    	
 
     	KVAdminMessage dataMessage = new KVAdminMessage();
 		dataMessage.setStatusType(StatusType.DATA);
@@ -387,13 +390,15 @@ public class KVServer{
 		
 		String data = "";
 
+		int count = 0;
+		
 		synchronized(keyvalue){
 			for(String key : keyvalue.keySet()){
 				String hashedkey= ConsistentHashing.getHashedKey(key);
 				
 				if(to.compareTo(from) < 0){
 					if(hashedkey.compareTo(from) > 0 || hashedkey.compareTo(to) < 0){
-						toRemove.add(key);
+						count++;
 						String value = keyvalue.get(key);
 							data += (key + " " + value);
 						data += ":";									
@@ -402,7 +407,7 @@ public class KVServer{
 				}
 				
 				if(hashedkey.compareTo(from) > 0 && hashedkey.compareTo(to) < 0){
-					toRemove.add(key);
+					count++;
 					String value = keyvalue.get(key);
 						data += (key + " " + value);
 					data += ".";
@@ -424,9 +429,8 @@ public class KVServer{
 		moveFinished.setStatusType(StatusType.MOVEFINISH);
 		ecsMsgHandler.sendMessage(moveFinished.serialize().getMsg());
 		
-    	logger.info(toRemove.size() + " keyvalue pair are transferred");
+    	logger.info(count + " keyvalue pair are transferred");
 		
-		return toRemove;
     }
     
     private void removeData(String from, String to){
@@ -545,6 +549,7 @@ public class KVServer{
     	try {
 			KVServer kvserver = new KVServer();
 			kvserver.run(Integer.parseInt(args[0]));
+//			kvserver.run(50007);
 
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");

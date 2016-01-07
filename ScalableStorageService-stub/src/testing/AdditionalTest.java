@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
 
+import org.junit.After;
 import org.junit.Test;
 
 import app_KvServer.KVServer;
@@ -28,20 +29,11 @@ public class AdditionalTest extends TestCase {
 	//just needs to reach the end
 	
 	public void setUp() {
-		int numnode = 8;
+		int numnode = 7;
 		int cacheSize = 10;
 		ecs = new ECS();
 		ecs.startEcs(40000, numnode, cacheSize, "FIFO");
 
-		for(int i = 0; i < numnode; i++){
-			final int index = i;
-			new Thread(){
-				public void run(){
-					KVServer kvServer = new KVServer();
-					kvServer.run(50000+index);
-				}
-			}.start();
-		}
 		ecs.start();
 	}
 
@@ -94,29 +86,34 @@ public class AdditionalTest extends TestCase {
 
 	}
 	
-		@Test
-		public void testLock(){
-			ecs.stop();
+	@Test
+	public void testStop(){
+		ecs.stop();
 			
-			KVStore client = new KVStore("127.0.0.1", 50000);
-			try {
-				client.connect();
-			} catch (UnknownHostException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			KVMessage message = null;
-			try {
-				message = client.put("key", "value");
-
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			assertTrue(message != null && message.getStatus().equals(StatusType.SERVER_STOPPED));
-			
+		KVStore client = new KVStore("127.0.0.1", 50000);
+		try {
+			client.connect();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		KVMessage message = null;
+		try {
+			message = client.put("key", "value");
+
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println(message.getStatus());
+		assertTrue(message != null && message.getStatus().equals(StatusType.SERVER_STOPPED));
+	}
+	@After
+	public void clean(){
+		ecs.shutDown();
+	}
+	
 }

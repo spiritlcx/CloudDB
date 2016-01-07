@@ -26,14 +26,14 @@ public class ECS {
 	final private Logger logger = Logger.getRootLogger();
 	private Metadata metadata = new Metadata();
 	private ServerSocket ecsServer;
-	DatagramSocket detectorServer;
-	boolean running;
+	private DatagramSocket detectorServer;
+	private volatile boolean running;
 	
 	private HashMap<String, ServerConnection> hashthreads = new HashMap<String, ServerConnection>();
 
 	private ArrayList<Server> idleservers = new ArrayList<Server>();
 
-	ArrayList<Process> procs = new ArrayList<Process>(); 
+	ArrayList<Process> procs = new ArrayList<Process>();
 
 	
 	public ECS(){
@@ -71,16 +71,16 @@ public class ECS {
 							if(ipport.length == 2){
 
 								String hashedkey = ConsistentHashing.getHashedKey(ipport[0] + ipport[1]);
-								
-								Server toremove = metadata.getServer(hashedkey);
-								if(toremove != null){
-									hashthreads.remove(toremove.hashedkey);
+
+								if(hashthreads.remove(hashedkey) != null){
+
+									Server toremove = metadata.getServer(hashedkey);
 
 									logger.info("server with ip:" + ipport[0] + " and port:" + ipport[1] + " has failed");
 
 									Thread t = new Thread(){
 										public void run(){
-											handleFailure(toremove);											
+											handleFailure(toremove);
 										}
 									};
 									t.start();
@@ -92,7 +92,8 @@ public class ECS {
 							
 						} catch (IOException | InterruptedException e) {
 							// TODO Auto-generated catch block
-							e.printStackTrace();
+							logger.info("failuredetector is closed");
+							return;
 						}
 					}					
 				}
@@ -195,6 +196,17 @@ public class ECS {
 					ServerConnection connection = hashthreads.get(key);
 					connection.shutDown();
 				}
+				
+				hashthreads.clear();
+				idleservers.clear();
+				metadata.clear();
+				detectorServer.close();
+				try {
+					ecsServer.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		}.start();
 
@@ -207,12 +219,21 @@ public class ECS {
 	 */
 	public void stopRunning(){
 		running = false;
+
+		detectorServer.close();
+		try {
+			ecsServer.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 	
 	public void handleFailure(Server server){
 		idleservers.add(server);
 
-		if(metadata.size() < 3)
+		if(metadata.size() <= 3)
 			return;
 		
 		Server preServer = metadata.getPredecessor(server.hashedkey);
@@ -226,10 +247,9 @@ public class ECS {
 		hashthreads.get(suceServer.hashedkey).receiveData();
 		hashthreads.get(sesuceServer.hashedkey).receiveData();
 
-		hashthreads.get(preServer.hashedkey).moveData(preServer.from, preServer.to, suceServer.ip, Integer.parseInt(suceServer.port) - 20);
-		hashthreads.get(sepreServer.hashedkey).moveData(sepreServer.from, sepreServer.to, sesuceServer.ip, Integer.parseInt(sesuceServer.port) - 20);
-		
-		
+		hashthreads.get(preServer.hashedkey).moveData(preServer.from, preServer.to, sesuceServer.ip, Integer.parseInt(sesuceServer.port) - 20);
+		hashthreads.get(sepreServer.hashedkey).moveData(sepreServer.from, sepreServer.to, suceServer.ip, Integer.parseInt(suceServer.port) - 20);
+				
 		// thsuceServer and suceServer is same when size is 4
 		if(metadata.size() != 4){
 			hashthreads.get(thsuceServer.hashedkey).receiveData();
@@ -240,8 +260,7 @@ public class ECS {
 		
 		for(ServerConnection connection : hashthreads.values()){
 			connection.update(metadata);
-		}
-	
+		}	
 	}
 	
 	 /* Create a new KVServer with the specified cache size and 
@@ -258,6 +277,18 @@ public class ECS {
 				if(idleservers.size() != 0){
 					Server newworkingserver = getRandomNode();
 					metadata.add(newworkingserver);
+					Runtime run = Runtime.getRuntime(); 
+
+					Process proc;
+					try {
+						proc = run.exec("java -jar ./server.jar " + newworkingserver.port);
+						procs.add(proc);
+
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						logger.error(e1.getMessage());
+					}
+
 					Server successor = metadata.getSuccessor(newworkingserver.hashedkey);
 		
 					try {
@@ -288,9 +319,9 @@ public class ECS {
 					}
 		
 					ServerConnection suserver = hashthreads.get(successor.hashedkey);
-					
+
 					suserver.setWriteLock();
-					suserver.moveData(newworkingserver.from, newworkingserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.to) - 20);
+					suserver.moveData(newworkingserver.from, newworkingserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.port) - 20);
 
 					if(metadata.getServers().size() > 3){
 						Server sesuserver = metadata.getSuccessor(successor.hashedkey);
@@ -298,14 +329,17 @@ public class ECS {
 						hashthreads.get(thsuserver.hashedkey).removeData(newworkingserver.from, newworkingserver.to);
 						
 						Server preserver = metadata.getPredecessor(newworkingserver.hashedkey);
-						Server sepreserver = metadata.getPredecessor(newworkingserver.hashedkey);
-						
-						hashthreads.get(preserver.hashedkey).moveData(preserver.from, preserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.port));
-						hashthreads.get(sepreserver.hashedkey).moveData(sepreserver.from, sepreserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.port));
+						Server sepreserver = metadata.getPredecessor(preserver.hashedkey);
+
+						hashthreads.get(newworkingserver.hashedkey).receiveData();
+						hashthreads.get(preserver.hashedkey).moveData(preserver.from, preserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.port) - 20);
+
+						hashthreads.get(newworkingserver.hashedkey).receiveData();
+						hashthreads.get(sepreserver.hashedkey).moveData(sepreserver.from, sepreserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.port) - 20);
 
 					}else if(metadata.getServers().size() == 3){
 						Server preserver = metadata.getPredecessor(newworkingserver.hashedkey);
-						hashthreads.get(preserver.hashedkey).moveData(preserver.from, preserver.to, preserver.ip, Integer.parseInt(preserver.port));
+						hashthreads.get(preserver.hashedkey).moveData(preserver.from, preserver.to, preserver.ip, Integer.parseInt(preserver.port) - 20);
 					}
 
 					for(ServerConnection connection : hashthreads.values()){
@@ -324,39 +358,15 @@ public class ECS {
 	public void removeNode(){
 		Thread t = new Thread(){
 			public void run(){
+				hashthreads.get(metadata.getFirstServer().hashedkey).shutDown();
+				hashthreads.remove(metadata.getFirstServer().hashedkey);
+				logger.info(metadata.getFirstServer().port + " is removed");
 				handleFailure(metadata.getFirstServer());
 			}
 		};
 		t.start();
-		try {
-			t.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		hashthreads.get(metadata.getFirstServer().hashedkey).shutDown();
-		hashthreads.remove(metadata.getFirstServer().hashedkey);
 	}
-	
-//	public static void main(String [] args){
-//		try {
-//			
-//			new LogSetup("logs/ecs.log", Level.ALL);
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//
-//		final ECS ecs = new ECS();
-//		new Thread(){
-//			public void run(){
-//				ecs.startEcs(40000, 2, 10, "FIFO");
-//			}
-//		}.start();
-//	}
-
-	
+		
 	public Metadata getMetaData(){
 		return metadata;
 	}
@@ -432,7 +442,6 @@ public class ECS {
 
 		for(Server server : metadata.getServers().values()){
 			try {
-
 				proc = run.exec("java -jar ./server.jar " + server.port);
 				procs.add(proc);
 			} catch (IOException e) {

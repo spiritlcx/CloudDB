@@ -123,7 +123,7 @@ public class FailureDetector extends Thread{
 					}
 				}
 				if(flag == false){
-					members.add(new Member(newmember.ip, newmember.port, newmember.counter, newmember.time));
+					members.add(new Member(newmember.ip, newmember.port, newmember.counter, self.time));
 				}
 			}
 			isupdating = false;

@@ -1,18 +1,19 @@
 package metadata;
 
-import java.io.Serializable;
 import java.util.TreeMap;
 
 import ecs.ConsistentHashing;
-import ecs.ECS;
 import ecs.Server;
 
-public class Metadata implements Serializable{
+public class Metadata{
 
 	private TreeMap<String, Server> servers = new TreeMap<String, Server>();
 	public static String start = "00000000000000000000000000000000";
 	public static String end = "ffffffffffffffffffffffffffffffff";
 
+	public void clear(){
+		servers.clear();
+	}
 	public Server getServer(String hashedkey){
 		return servers.get(hashedkey);
 	}
