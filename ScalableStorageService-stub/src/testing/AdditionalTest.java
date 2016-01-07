@@ -7,7 +7,7 @@ import java.security.NoSuchAlgorithmException;
 import org.junit.After;
 import org.junit.Test;
 
-import app_KvServer.KVServer;
+import app_kvServer.KVServer;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
 

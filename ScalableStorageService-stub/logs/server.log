@@ -1,181 +1,0 @@
-2016-01-06 12:54:59,939 INFO  [main] root: Initialize server ...
-2016-01-06 12:54:59,950 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50001}
-'
-2016-01-06 12:54:59,950 INFO  [main] root: Server listening on port: 50001
-2016-01-06 12:54:59,959 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50001 61235262bbcf66352227ca8fac0615f3 1d4069d9c7595fd46ff64e61cba5519e 61235262bbcf66352227ca8fac0615f3}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:55:04,449 INFO  [main] root: Initialize server ...
-2016-01-06 12:55:04,458 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50003}
-'
-2016-01-06 12:55:04,459 INFO  [main] root: Server listening on port: 50003
-2016-01-06 12:55:04,461 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50001 61235262bbcf66352227ca8fac0615f3 1d4069d9c7595fd46ff64e61cba5519e 61235262bbcf66352227ca8fac0615f3}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:55:08,865 INFO  [main] root: Initialize server ...
-2016-01-06 12:55:08,873 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50004}
-'
-2016-01-06 12:55:08,874 INFO  [main] root: Server listening on port: 50004
-2016-01-06 12:55:08,876 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50001 61235262bbcf66352227ca8fac0615f3 1d4069d9c7595fd46ff64e61cba5519e 61235262bbcf66352227ca8fac0615f3}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:55:13,663 INFO  [main] root: Initialize server ...
-2016-01-06 12:55:13,671 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50005}
-'
-2016-01-06 12:55:13,672 INFO  [main] root: Server listening on port: 50005
-2016-01-06 12:55:13,675 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50001 61235262bbcf66352227ca8fac0615f3 1d4069d9c7595fd46ff64e61cba5519e 61235262bbcf66352227ca8fac0615f3}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:55:22,028 INFO  [main] root: Initialize server ...
-2016-01-06 12:55:22,036 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50006}
-'
-2016-01-06 12:55:22,036 INFO  [main] root: Server listening on port: 50006
-2016-01-06 12:55:22,039 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50001 61235262bbcf66352227ca8fac0615f3 1d4069d9c7595fd46ff64e61cba5519e 61235262bbcf66352227ca8fac0615f3}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:55:28,039 INFO  [main] root: Initialize server ...
-2016-01-06 12:55:28,047 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50007}
-'
-2016-01-06 12:55:28,048 INFO  [main] root: Server listening on port: 50007
-2016-01-06 12:55:28,050 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50001 61235262bbcf66352227ca8fac0615f3 1d4069d9c7595fd46ff64e61cba5519e 61235262bbcf66352227ca8fac0615f3}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:55:41,276 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 12:55:41,277 INFO  [main] root: start to serve
-2016-01-06 12:55:41,283 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 12:55:41,284 INFO  [main] root: start to serve
-2016-01-06 12:55:41,285 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 12:55:41,285 INFO  [main] root: start to serve
-2016-01-06 12:55:41,287 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 12:55:41,287 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 12:55:41,288 INFO  [main] root: start to serve
-2016-01-06 12:55:41,291 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 12:55:41,291 INFO  [main] root: start to serve
-2016-01-06 12:55:41,291 INFO  [main] root: start to serve
-2016-01-06 12:55:41,315 INFO  [Thread-0] root: The server is started
-2016-01-06 12:55:41,324 INFO  [Thread-0] root: The server is started
-2016-01-06 12:55:41,326 INFO  [Thread-0] root: The server is started
-2016-01-06 12:55:41,327 INFO  [Thread-0] root: The server is started
-2016-01-06 12:55:41,327 INFO  [Thread-0] root: The server is started
-2016-01-06 12:55:41,337 INFO  [Thread-0] root: The server is started
-2016-01-06 12:55:50,365 ERROR [Thread-3] root: 
-2016-01-06 12:55:50,365 ERROR [Thread-4] root: 
-2016-01-06 12:56:05,322 INFO  [Thread-0] root: Received message:	 '{StatusType: RECEIVE}'
-2016-01-06 12:56:05,323 INFO  [Thread-0] root: Send message:	 '{StatusType: PREPARED}
-'
-2016-01-06 12:56:05,323 INFO  [Thread-0] root: Received message:	 '{StatusType: RECEIVE}'
-2016-01-06 12:56:05,324 INFO  [Thread-0] root: Send message:	 '{StatusType: PREPARED}
-'
-2016-01-06 12:56:05,324 INFO  [Thread-0] root: Received message:	 '{StatusType: RECEIVE}'
-2016-01-06 12:56:05,324 INFO  [Thread-0] root: Send message:	 '{StatusType: PREPARED}
-'
-2016-01-06 12:56:05,325 INFO  [Thread-0] root: Received message:	 '{StatusType: MOVE, from: 06020eaa7d5ae97c154bf98f6e8987d4, to: 1d4069d9c7595fd46ff64e61cba5519e, ip: 127.0.0.1, port: 49987}'
-2016-01-06 12:56:05,326 INFO  [Thread-0] root: Send message:	 '{StatusType: DATA, data: }
-'
-2016-01-06 12:56:05,326 INFO  [Thread-0] root: Received message:	 '{StatusType: DATA, data: }'
-2016-01-06 12:56:05,326 INFO  [Thread-0] root: Send message:	 '{StatusType: MOVEFINISH}
-'
-2016-01-06 12:56:05,326 INFO  [Thread-0] root: 0 keyvalue pair are transferred
-2016-01-06 12:56:05,326 INFO  [Thread-0] root: 0 key value pairs are received
-2016-01-06 12:56:05,327 INFO  [Thread-0] root: Received message:	 '{StatusType: MOVE, from: ea36ea4c34116912eddfd0a3e2faeedf, to: 06020eaa7d5ae97c154bf98f6e8987d4, ip: 127.0.0.1, port: 49985}'
-2016-01-06 12:56:05,328 INFO  [Thread-0] root: Send message:	 '{StatusType: DATA, data: }
-'
-2016-01-06 12:56:05,328 INFO  [Thread-0] root: Received message:	 '{StatusType: DATA, data: }'
-2016-01-06 12:56:05,328 INFO  [Thread-0] root: Send message:	 '{StatusType: MOVEFINISH}
-'
-2016-01-06 12:56:05,328 INFO  [Thread-0] root: 0 keyvalue pair are transferred
-2016-01-06 12:56:05,328 INFO  [Thread-0] root: 0 key value pairs are received
-2016-01-06 12:56:05,329 INFO  [Thread-0] root: Received message:	 '{StatusType: MOVE, from: 61235262bbcf66352227ca8fac0615f3, to: 8fde0784e948d32fb2e0e6a9824d0df9, ip: 127.0.0.1, port: 49986}'
-2016-01-06 12:56:05,330 INFO  [Thread-0] root: Send message:	 '{StatusType: DATA, data: }
-'
-2016-01-06 12:56:05,330 INFO  [Thread-0] root: Send message:	 '{StatusType: MOVEFINISH}
-'
-2016-01-06 12:56:05,331 INFO  [Thread-0] root: 0 keyvalue pair are transferred
-2016-01-06 12:56:05,331 INFO  [Thread-0] root: Received message:	 '{StatusType: DATA, data: }'
-2016-01-06 12:56:05,331 INFO  [Thread-0] root: 0 key value pairs are received
-2016-01-06 12:56:05,332 INFO  [Thread-0] root: Received message:	 '{StatusType: UPDATE, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:56:05,333 INFO  [Thread-0] root: Received message:	 '{StatusType: UPDATE, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:56:05,334 INFO  [Thread-0] root: Received message:	 '{StatusType: UPDATE, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:56:05,335 INFO  [Thread-0] root: Received message:	 '{StatusType: UPDATE, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:56:05,335 INFO  [Thread-0] root: Received message:	 '{StatusType: UPDATE, metadata: {127.0.0.1 50003 06020eaa7d5ae97c154bf98f6e8987d4 ea36ea4c34116912eddfd0a3e2faeedf 06020eaa7d5ae97c154bf98f6e8987d4}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 06020eaa7d5ae97c154bf98f6e8987d4 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50007 8fde0784e948d32fb2e0e6a9824d0df9 61235262bbcf66352227ca8fac0615f3 8fde0784e948d32fb2e0e6a9824d0df9}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 8fde0784e948d32fb2e0e6a9824d0df9 d9c48d384cfef4edfc3305610fb2c31a}<{127.0.0.1 50006 ea36ea4c34116912eddfd0a3e2faeedf d9c48d384cfef4edfc3305610fb2c31a ea36ea4c34116912eddfd0a3e2faeedf}<}'
-2016-01-06 12:57:35,169 ERROR [Thread-5] root: 
-2016-01-06 12:57:36,117 ERROR [Thread-3] root: 
-2016-01-06 12:57:36,117 ERROR [Thread-4] root: 
-2016-01-06 12:57:36,913 ERROR [Thread-3] root: 
-2016-01-06 12:57:36,913 ERROR [Thread-4] root: 
-2016-01-06 13:55:46,273 INFO  [main] root: Initialize server ...
-2016-01-06 13:55:46,283 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50002}
-'
-2016-01-06 13:55:46,284 INFO  [main] root: Server listening on port: 50002
-2016-01-06 13:55:46,285 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}'
-2016-01-06 13:55:52,401 INFO  [main] root: Initialize server ...
-2016-01-06 13:55:52,410 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50004}
-'
-2016-01-06 13:55:52,410 INFO  [main] root: Server listening on port: 50004
-2016-01-06 13:55:52,412 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}'
-2016-01-06 13:55:57,425 INFO  [main] root: Initialize server ...
-2016-01-06 13:55:57,438 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50005}
-'
-2016-01-06 13:55:57,438 INFO  [main] root: Server listening on port: 50005
-2016-01-06 13:55:57,443 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 3, displacementStrategy: FIFO, metadata: {127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}'
-2016-01-06 13:56:00,237 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 13:56:00,237 INFO  [main] root: start to serve
-2016-01-06 13:56:00,241 INFO  [Thread-0] root: The server is started
-2016-01-06 13:56:00,243 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 13:56:00,243 INFO  [main] root: start to serve
-2016-01-06 13:56:00,243 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 13:56:00,246 INFO  [main] root: start to serve
-2016-01-06 13:56:00,251 INFO  [Thread-0] root: The server is started
-2016-01-06 13:56:00,255 INFO  [Thread-0] root: The server is started
-2016-01-06 13:56:10,850 INFO  [main] root: Connected to localhost on port 35927
-2016-01-06 13:56:10,850 INFO  [main] root: start to serve
-2016-01-06 13:56:10,851 INFO  [Thread-6] root: Send message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50002
-'
-2016-01-06 13:56:13,257 INFO  [Thread-6] root: Received message:	 '{StatusType: PUT, key:aa, value:bb}'
-2016-01-06 13:56:13,259 INFO  [Thread-6] root: Send message:	 '{StatusType: SERVER_NOT_RESPONSIBLE, key:aa, metadata:{127.0.0.1 50002 1752af20beba3cdb5e87f5be2dd3c5de d9c48d384cfef4edfc3305610fb2c31a 1752af20beba3cdb5e87f5be2dd3c5de}<{127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 1752af20beba3cdb5e87f5be2dd3c5de 1d4069d9c7595fd46ff64e61cba5519e}<{127.0.0.1 50005 d9c48d384cfef4edfc3305610fb2c31a 1d4069d9c7595fd46ff64e61cba5519e d9c48d384cfef4edfc3305610fb2c31a}<}
-'
-2016-01-06 13:56:13,281 ERROR [Thread-6] root: Error! Connection lost!
-2016-01-06 13:56:13,284 INFO  [main] root: Connected to localhost on port 40445
-2016-01-06 13:56:13,284 INFO  [main] root: start to serve
-2016-01-06 13:56:13,285 INFO  [Thread-6] root: Send message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50005
-'
-2016-01-06 13:56:13,285 INFO  [Thread-6] root: Received message:	 '{StatusType: PUT, key:aa, value:bb}'
-2016-01-06 13:56:13,286 INFO  [Thread-6] root: Send message:	 '{StatusType: PUT, key:aa, value:bb}
-'
-2016-01-06 13:56:13,286 INFO  [Thread-4] root: Received message:	 '{StatusType: PUT, key:aa, value:bb}'
-2016-01-06 13:56:13,286 INFO  [Thread-5] root: Received message:	 '{StatusType: PUT, key:aa, value:bb}'
-2016-01-06 13:56:13,288 INFO  [Thread-6] root: Send message:	 '{StatusType: PUT, key:aa, value:bb}
-'
-2016-01-06 13:56:13,288 INFO  [Thread-6] root: Send message:	 '{StatusType: PUT_SUCCESS, key:aa, value:bb}
-'
-2016-01-06 13:56:24,951 ERROR [Thread-6] root: Error! Connection lost!
-2016-01-06 13:56:24,957 INFO  [main] root: Connected to localhost on port 35931
-2016-01-06 13:56:24,957 INFO  [main] root: start to serve
-2016-01-06 13:56:24,961 INFO  [Thread-7] root: Send message:	 'Connection to MSRG Echo server established: /127.0.0.1 / 50002
-'
-2016-01-06 13:56:24,962 INFO  [Thread-7] root: Received message:	 '{StatusType: PUT, key:kk, value:ll}'
-2016-01-06 13:56:24,965 INFO  [Thread-4] root: Received message:	 '{StatusType: PUT, key:kk, value:ll}'
-2016-01-06 13:56:24,966 INFO  [Thread-7] root: Send message:	 '{StatusType: PUT, key:kk, value:ll}
-'
-2016-01-06 13:56:24,967 INFO  [Thread-4] root: Received message:	 '{StatusType: PUT, key:kk, value:ll}'
-2016-01-06 13:56:24,968 INFO  [Thread-7] root: Send message:	 '{StatusType: PUT, key:kk, value:ll}
-'
-2016-01-06 13:56:24,969 INFO  [Thread-7] root: Send message:	 '{StatusType: PUT_SUCCESS, key:kk, value:ll}
-'
-2016-01-06 13:56:28,180 INFO  [Thread-7] root: Received message:	 '{StatusType: GET, key:aa}'
-2016-01-06 13:56:28,181 INFO  [Thread-7] root: Send message:	 '{StatusType: GET_SUCCESS, key:aa, value:bb}
-'
-2016-01-06 13:56:30,051 INFO  [Thread-7] root: Received message:	 '{StatusType: GET, key:kk}'
-2016-01-06 13:56:30,052 INFO  [Thread-7] root: Send message:	 '{StatusType: GET_SUCCESS, key:kk, value:ll}
-'
-2016-01-06 13:56:46,134 ERROR [Thread-4] root: 
-2016-01-06 13:56:46,134 ERROR [Thread-5] root: 
-2016-01-06 13:56:46,726 ERROR [Thread-4] root: 
-2016-01-06 14:23:32,968 INFO  [main] root: Initialize server ...
-2016-01-06 14:23:32,977 INFO  [main] root: Send message:	 '{StatusType: RECEIVED, port: 50004}
-'
-2016-01-06 14:23:32,983 INFO  [main] root: Server listening on port: 50004
-2016-01-06 14:23:32,984 INFO  [Thread-0] root: Received message:	 '{StatusType: INIT, cacheSize: 1, displacementStrategy: FIFO, metadata: {127.0.0.1 50004 1d4069d9c7595fd46ff64e61cba5519e 00000000000000000000000000000000 ffffffffffffffffffffffffffffffff}<}'
-2016-01-06 14:23:37,327 INFO  [Thread-0] root: Received message:	 '{StatusType: START}'
-2016-01-06 14:23:37,329 INFO  [main] root: start to serve
-2016-01-06 14:23:37,331 INFO  [Thread-0] root: The server is started
-2016-01-06 14:23:46,930 INFO  [Thread-0] root: Received message:	 '{StatusType: SHUTDOWN}'
-2016-01-06 14:23:46,931 INFO  [Thread-0] root: The server is shutdown
-2016-01-06 14:23:46,931 ERROR [main] root: Error! Unable to establish connection. 
-
-java.net.SocketException: Socket closed
-	at java.net.PlainSocketImpl.socketAccept(Native Method)
-	at java.net.AbstractPlainSocketImpl.accept(AbstractPlainSocketImpl.java:409)
-	at java.net.ServerSocket.implAccept(ServerSocket.java:545)
-	at java.net.ServerSocket.accept(ServerSocket.java:513)
-	at app_KvServer.KVServer.run(KVServer.java:116)
-	at app_KvServer.KVServer.main(KVServer.java:527)
-2016-01-06 14:23:46,935 INFO  [main] root: Server stopped.

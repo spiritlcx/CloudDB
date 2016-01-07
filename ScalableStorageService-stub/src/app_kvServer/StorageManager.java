@@ -1,4 +1,4 @@
-package app_KvServer;
+package app_kvServer;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -80,9 +80,6 @@ public class StorageManager {
 	}
 	
 	public StatusType put(String key, String value){
-		
-		String[] server = metadata.getServerForKey(key);
-					
 		if(value.equals("null")){
 			if(keyvalue.get(key) != null){
 
@@ -183,17 +180,15 @@ public class StorageManager {
 
 	
 	public boolean isCoordinator(String ip, String port, String key){
-		String [] server = metadata.getServerForKey(key);
-		return server != null && (server[0]).equals(ip) && server[1].equals(port);
+		Server server = metadata.getServerForKey(key);
+		return (server.ip).equals(ip) && server.port.equals(port);
 	}
 	
 	public boolean isReplica(String ip, String port, String key){
-		String [] server = metadata.getServerForKey(key);
-		Server successor = metadata.getSuccessor(server[2]);
+		Server server = metadata.getServerForKey(key);
+		Server successor = metadata.getSuccessor(server.hashedkey);
 		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
-		System.out.println("port1:" + successor.port);
-		System.out.println("port2:" + sesuccessor.port);
 
-		return server != null && successor!= null && ((sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port)) || (successor.ip.equals(ip) && successor.port.equals(port)));
+		return successor!= null && ((sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port)) || (successor.ip.equals(ip) && successor.port.equals(port)));
 	}
 }

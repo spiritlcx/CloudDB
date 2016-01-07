@@ -1,4 +1,4 @@
-package app_KvServer;
+package app_kvServer;
 
 import java.io.IOException;
 import java.util.ArrayList;

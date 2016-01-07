@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
-import app_KvServer.KVServer;
+import app_kvServer.KVServer;
 import client.KVStore;
 
 public class Performance {

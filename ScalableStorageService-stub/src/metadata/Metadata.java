@@ -94,15 +94,15 @@ public class Metadata{
 	 * @param key	The key that needs to be looked up.
 	 * @return		A tuple of the responsible server's address and port.
 	 */
-	public String[] getServerForKey(String key)
+	public Server getServerForKey(String key)
 	{
 		if(servers.size() == 1)
-			return new String [] {servers.lastEntry().getValue().ip, servers.lastEntry().getValue().port, servers.lastEntry().getValue().hashedkey};
+			return servers.lastEntry().getValue();
 
 		if(key.compareTo(servers.lastEntry().getValue().hashedkey) > 0)
-			return new String [] {servers.firstEntry().getValue().ip, servers.firstEntry().getValue().port, servers.firstEntry().getValue().hashedkey};
+			return servers.firstEntry().getValue();
 		
-		return new String [] {servers.ceilingEntry(key).getValue().ip, servers.ceilingEntry(key).getValue().port, servers.ceilingEntry(key).getValue().hashedkey};
+		return servers.ceilingEntry(key).getValue();
 	}
 		
 	public Server remove(Server toRemove){

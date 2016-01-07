@@ -1,4 +1,4 @@
-package app_KvServer;
+package app_kvServer;
 
 import java.io.InputStream;
 import java.io.IOException;
@@ -14,6 +14,7 @@ import org.apache.log4j.*;
 import common.messages.KVMessage.StatusType;
 import common.messages.MessageHandler;
 import common.messages.TextMessage;
+import ecs.Server;
 import strategy.Strategy;
 
 
@@ -158,21 +159,19 @@ public class ClientConnection implements Runnable {
 			sentMessage.setStatusType(StatusType.SERVER_STOPPED);
 		}else if(KVServer.lock){
 			sentMessage.setStatusType(StatusType.SERVER_WRITE_LOCK);			
-		}else{		
-			String[] server = metadata.getServerForKey(key);
+		}else{
+			Server server = metadata.getServerForKey(key);
 	
-			if(server != null && server[0].equals("127.0.0.1") && server[1].equals("" + clientSocket.getLocalPort())){
+			if(server != null && server.ip.equals("127.0.0.1") && server.port.equals("" + clientSocket.getLocalPort())){
 				StatusType type = storageManager.put(key, value);
 				sentMessage.setStatusType(type);
-				sentMessage.setKey(key);
-				sentMessage.setValue(value);
 				replicationManager.replicate(type, key, value);
 			}else{
 				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
-				sentMessage.setKey(key);
-				sentMessage.setValue(value);
 				sentMessage.setMetadata(metadata);
 			}
+			sentMessage.setKey(key);
+			sentMessage.setValue(value);
 		}
 		
 		try {
@@ -185,61 +184,54 @@ public class ClientConnection implements Runnable {
 	private void get(TextMessage receivedMessage){
 		TextMessage sentMessage = new TextMessage();
 
-		if(receivedMessage.getKey() == null){
-			logger.error("not valid key");
-			return;
-		}
-
-		if(storageManager.isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), receivedMessage.getKey()) || 
-				storageManager.isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), receivedMessage.getKey())){
-			
-			String value = null;
-			if(keyvalue.get(receivedMessage.getKey()) != null){
-				value = keyvalue.get(receivedMessage.getKey());
-			} else {
-				value = persistance.lookup(receivedMessage.getKey());
-				if(value != null){
-					persistance.remove(receivedMessage.getKey());
-					String keyToRemove = strategy.get();
-					if(keyToRemove != null){
-						String valueToRemove = keyvalue.get(keyToRemove);
-						persistance.store(keyToRemove, valueToRemove);
-						synchronized(keyvalue){
-							keyvalue.remove(keyToRemove);
+		if(!KVServer.running.get()){
+			sentMessage.setStatusType(StatusType.SERVER_STOPPED);
+		}else{
+			if(storageManager.isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), receivedMessage.getKey()) || 
+					storageManager.isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), receivedMessage.getKey())){
+				
+				String value = null;
+				if(keyvalue.get(receivedMessage.getKey()) != null){
+					value = keyvalue.get(receivedMessage.getKey());
+				} else {
+					value = persistance.lookup(receivedMessage.getKey());
+					if(value != null){
+						persistance.remove(receivedMessage.getKey());
+						String keyToRemove = strategy.get();
+						if(keyToRemove != null){
+							String valueToRemove = keyvalue.get(keyToRemove);
+							persistance.store(keyToRemove, valueToRemove);
+							synchronized(keyvalue){
+								keyvalue.remove(keyToRemove);
+								}
+							synchronized(strategy){
+								strategy.remove(keyToRemove);
 							}
-						synchronized(strategy){
-							strategy.remove(keyToRemove);
 						}
+						keyvalue.put(receivedMessage.getKey(), value);
+						strategy.add(receivedMessage.getKey());
 					}
-					keyvalue.put(receivedMessage.getKey(), value);
-					strategy.add(receivedMessage.getKey());
+				}
+				if(value != null){
+					sentMessage.setStatusType(StatusType.GET_SUCCESS);
+					sentMessage.setKey(receivedMessage.getKey());
+					sentMessage.setValue(value);
+				} else {
+					sentMessage.setStatusType(StatusType.GET_ERROR);
+					sentMessage.setKey(receivedMessage.getKey());				
 				}
 			}
-			if(value != null){
-				sentMessage.setStatusType(StatusType.GET_SUCCESS);
+			else{
+				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
 				sentMessage.setKey(receivedMessage.getKey());
-				sentMessage.setValue(value);
-			} else {
-				sentMessage.setStatusType(StatusType.GET_ERROR);
-				sentMessage.setKey(receivedMessage.getKey());				
-			}
-			try {
-				messageHandler.sendMessage(sentMessage.serialize().getMsg());
-			} catch (IOException e) {
-				logger.error("Error while getting value!", e);
+				sentMessage.setMetadata(metadata);				
 			}
 		}
-		else{
-			sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
-			sentMessage.setKey(receivedMessage.getKey());
-			sentMessage.setMetadata(metadata);
-			
-			try {
-				messageHandler.sendMessage(sentMessage.serialize().getMsg());
-			} 
-			catch (IOException e) {
-				logger.error("Unable to send response!", e);
-			}
+		try {
+			messageHandler.sendMessage(sentMessage.serialize().getMsg());
+		} catch (IOException e) {
+			logger.error("Unable to send response!", e);
 		}
+
 	}
 }

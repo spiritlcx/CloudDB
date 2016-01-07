@@ -150,13 +150,13 @@ public class KVStore implements KVCommInterface {
 		
 		if(metadata != null)
 		{
-			String[] correctServer = metadata.getServerForKey(key);
+			Server correctServer = metadata.getServerForKey(key);
 			
-			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port+"")))
+			if(correctServer != null && (!correctServer.ip.equals(this.address) || !correctServer.port.equals(this.port+"")))
 			{
 				disconnect();
-				this.address = correctServer[0];
-				this.port = Integer.parseInt(correctServer[1]);
+				this.address = correctServer.ip;
+				this.port = Integer.parseInt(correctServer.port);
 				connect();
 			}
 		}
@@ -204,17 +204,17 @@ public class KVStore implements KVCommInterface {
 		sentMessage.setKey(key);
 		
 		if(metadata != null){
-			String[] correctServer = metadata.getServerForKey(key);
-			Server successor = metadata.getSuccessor(correctServer[2]);
+			Server correctServer = metadata.getServerForKey(key);
+			Server successor = metadata.getSuccessor(correctServer.hashedkey);
 			Server sesuccessor = null;
 			if(successor != null){
 				sesuccessor = metadata.getSuccessor(successor.hashedkey);
 			}
 
-			if((!correctServer[0].equals(this.address) || !correctServer[1].equals("" + this.port)) && (!sesuccessor.ip.equals(this.address) || !sesuccessor.port.equals("" + this.port)) && (!successor.ip.equals(this.address) || !successor.port.equals("" + this.port))){
+			if((!correctServer.ip.equals(this.address) || !correctServer.port.equals("" + this.port)) && (!sesuccessor.ip.equals(this.address) || !sesuccessor.port.equals("" + this.port)) && (!successor.ip.equals(this.address) || !successor.port.equals("" + this.port))){
 				disconnect();
-				this.address = correctServer[0];
-				this.port = Integer.parseInt(correctServer[1]);
+				this.address = correctServer.ip;
+				this.port = Integer.parseInt(correctServer.port);
 				connect();
 			}
 		}
@@ -257,13 +257,13 @@ public class KVStore implements KVCommInterface {
 	 * @throws Exception	
 	 */
 	private void reestablishConnection(String key) throws Exception{
-		String[] correctserver = metadata.getServerForKey(key);
+		Server correctserver = metadata.getServerForKey(key);
 		
 		if(correctserver != null)
 		{
 			disconnect();
-			this.address = correctserver[0];
-			this.port = Integer.parseInt(correctserver[1]);
+			this.address = correctserver.ip;
+			this.port = Integer.parseInt(correctserver.port);
 			connect();
 		}
 	}

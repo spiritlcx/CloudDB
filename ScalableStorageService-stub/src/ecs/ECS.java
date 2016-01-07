@@ -446,7 +446,7 @@ public class ECS {
 
 		for(Server server : metadata.getServers().values()){
 			try {
-				proc = run.exec("java -jar ./server.jar " + server.port);
+				proc = run.exec("java -jar ./ms3-server.jar " + server.port);
 				procs.add(proc);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
