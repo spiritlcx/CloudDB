@@ -1,4 +1,5 @@
 package app_KvServer;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.apache.log4j.Logger;
@@ -6,6 +7,7 @@ import org.apache.log4j.Logger;
 import metadata.Metadata;
 import strategy.Strategy;
 import common.messages.KVMessage.StatusType;
+import ecs.ConsistentHashing;
 import ecs.Server;
 
 public class StorageManager {
@@ -50,10 +52,36 @@ public class StorageManager {
 	public Persistance getPersistance(){
 		return persistance;
 	}
+
+	public ArrayList<String> find(String from, String to){
+		ArrayList<String> result = new ArrayList<String>();
+		if(from.compareTo(to) > 0){
+			for(String key : keyvalue.keySet()){
+				if(ConsistentHashing.getHashedKey(key).compareTo(from) > 0 || 
+						ConsistentHashing.getHashedKey(key).compareTo(to) < 0){
+					result.add(key);
+				}
+			}
+		}else{
+			for(String key : keyvalue.keySet()){
+				if(ConsistentHashing.getHashedKey(key).compareTo(from) > 0 && 
+						ConsistentHashing.getHashedKey(key).compareTo(to) < 0){
+					result.add(key);
+				}
+			}
+		}
+		return result;
+	}
+	
+	public void removeData(String from, String to){
+		for(String key : find(from, to)){
+			keyvalue.remove(key);
+		}
+	}
 	
 	public StatusType put(String key, String value){
 		
-		String[] server = metadata.getServer(key);
+		String[] server = metadata.getServerForKey(key);
 					
 		if(value.equals("null")){
 			if(keyvalue.get(key) != null){
@@ -155,12 +183,12 @@ public class StorageManager {
 
 	
 	public boolean isCoordinator(String ip, String port, String key){
-		String [] server = metadata.getServer(key);
+		String [] server = metadata.getServerForKey(key);
 		return server != null && (server[0]).equals(ip) && server[1].equals(port);
 	}
 	
 	public boolean isReplica(String ip, String port, String key){
-		String [] server = metadata.getServer(key);
+		String [] server = metadata.getServerForKey(key);
 		Server successor = metadata.getSuccessor(server[2]);
 		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
 		System.out.println("port1:" + successor.port);

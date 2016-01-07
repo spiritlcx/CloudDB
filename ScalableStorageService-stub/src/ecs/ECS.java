@@ -1,16 +1,17 @@
 package ecs;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
@@ -18,8 +19,6 @@ import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
-import common.messages.KVAdminMessage;
-import common.messages.KVAdminMessage.StatusType;
 import metadata.Metadata;
 
 public class ECS {
@@ -32,8 +31,10 @@ public class ECS {
 	
 	private HashMap<String, ServerConnection> hashthreads = new HashMap<String, ServerConnection>();
 
-	private TreeMap<String, Server> workingservers = new TreeMap<String, Server>();
 	private ArrayList<Server> idleservers = new ArrayList<Server>();
+
+	ArrayList<Process> procs = new ArrayList<Process>(); 
+
 	
 	public ECS(){
 		running = true;
@@ -71,25 +72,25 @@ public class ECS {
 
 								String hashedkey = ConsistentHashing.getHashedKey(ipport[0] + ipport[1]);
 								
-								Server toremove = workingservers.get(hashedkey);
+								Server toremove = metadata.getServer(hashedkey);
 								if(toremove != null){
-									hashthreads.remove(hashedkey);
-									idleservers.add(toremove);
-	
+									hashthreads.remove(toremove.hashedkey);
+
 									logger.info("server with ip:" + ipport[0] + " and port:" + ipport[1] + " has failed");
-	
-									handleFailure(toremove);
+
+									Thread t = new Thread(){
+										public void run(){
+											handleFailure(toremove);											
+										}
+									};
+									t.start();
+									t.join();
 									
-									workingservers.remove(hashedkey);
-									
-									for(ServerConnection connection : hashthreads.values()){
-										connection.update(metadata);
-									}
 									addNode(10, "FIFO");
 								}
 							}
 							
-						} catch (IOException e) {
+						} catch (IOException | InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
@@ -132,11 +133,8 @@ public class ECS {
 					metadata.add(idleservers.get(index));
 					idleservers.remove(index);
 				}
-				
-				workingservers = metadata.getServers();
-
-				
-				for(Server server : workingservers.values()){
+								
+				for(Server server : metadata.getServers().values()){
 					logger.info(server);
 				}
 				
@@ -149,6 +147,10 @@ public class ECS {
 			logger.error(e.getMessage());
 		}
 
+	}
+	
+	public TreeMap<String, Server> getServers(){
+		return metadata.getServers();
 	}
 	
 	/**
@@ -179,7 +181,7 @@ public class ECS {
 					connection.stopServer();
 				}
 			}
-		}.start();
+		}.start();		
 	}
 	
 	
@@ -195,6 +197,9 @@ public class ECS {
 				}
 			}
 		}.start();
+
+		stopServers();
+
 	}
 
 	/*
@@ -205,8 +210,9 @@ public class ECS {
 	}
 	
 	public void handleFailure(Server server){
-		
-		if(workingservers.size() < 3)
+		idleservers.add(server);
+
+		if(metadata.size() < 3)
 			return;
 		
 		Server preServer = metadata.getPredecessor(server.hashedkey);
@@ -225,11 +231,17 @@ public class ECS {
 		
 		
 		// thsuceServer and suceServer is same when size is 4
-		if(workingservers.size() != 4){
+		if(metadata.size() != 4){
 			hashthreads.get(thsuceServer.hashedkey).receiveData();
 			hashthreads.get(suceServer.hashedkey).moveData(suceServer.from, suceServer.to, thsuceServer.ip, Integer.parseInt(thsuceServer.port) - 20);
 		}
-			
+		
+		metadata.removeServer(server.hashedkey);
+		
+		for(ServerConnection connection : hashthreads.values()){
+			connection.update(metadata);
+		}
+	
 	}
 	
 	 /* Create a new KVServer with the specified cache size and 
@@ -259,6 +271,10 @@ public class ECS {
 							if(port != Integer.parseInt(newworkingserver.port))
 								continue;
 							connection.startServer();
+							
+							if(metadata.getServers().size() == 1)
+								return;
+							
 							connection.receiveData();
 
 							break;
@@ -275,7 +291,23 @@ public class ECS {
 					
 					suserver.setWriteLock();
 					suserver.moveData(newworkingserver.from, newworkingserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.to) - 20);
-											
+
+					if(metadata.getServers().size() > 3){
+						Server sesuserver = metadata.getSuccessor(successor.hashedkey);
+						Server thsuserver = metadata.getSuccessor(sesuserver.hashedkey);
+						hashthreads.get(thsuserver.hashedkey).removeData(newworkingserver.from, newworkingserver.to);
+						
+						Server preserver = metadata.getPredecessor(newworkingserver.hashedkey);
+						Server sepreserver = metadata.getPredecessor(newworkingserver.hashedkey);
+						
+						hashthreads.get(preserver.hashedkey).moveData(preserver.from, preserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.port));
+						hashthreads.get(sepreserver.hashedkey).moveData(sepreserver.from, sepreserver.to, newworkingserver.ip, Integer.parseInt(newworkingserver.port));
+
+					}else if(metadata.getServers().size() == 3){
+						Server preserver = metadata.getPredecessor(newworkingserver.hashedkey);
+						hashthreads.get(preserver.hashedkey).moveData(preserver.from, preserver.to, preserver.ip, Integer.parseInt(preserver.port));
+					}
+
 					for(ServerConnection connection : hashthreads.values()){
 						connection.update(metadata);
 					}
@@ -290,34 +322,21 @@ public class ECS {
 	 *  Remove a node from the storage service at an arbitrary position. 
 	 */
 	public void removeNode(){
-		
-		new Thread(){
+		Thread t = new Thread(){
 			public void run(){
-				Random random = new Random();
-				if(workingservers.size() == 1){
-					shutDown();
-				}
-				int removeInt = random.nextInt(workingservers.size());
-				Server toRemove = workingservers.get(removeInt);
-				Server successor = metadata.remove(toRemove);
-
-				hashthreads.get(toRemove.hashedkey).setWriteLock();
-				hashthreads.get(successor.hashedkey).update(metadata);
-
-				hashthreads.get(successor.hashedkey).receiveData();
-				hashthreads.get(toRemove.hashedkey).moveData(toRemove.from, toRemove.to, successor.ip, Integer.parseInt(successor.to)-20);
-				
-
-				for(ServerConnection connection : hashthreads.values()){
-					connection.update(metadata);
-				}
-
-	
-				hashthreads.get(toRemove.hashedkey).shutDown();
-				
+				handleFailure(metadata.getFirstServer());
 			}
-		}.start();
+		};
+		t.start();
+		try {
+			t.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
+		hashthreads.get(metadata.getFirstServer().hashedkey).shutDown();
+		hashthreads.remove(metadata.getFirstServer().hashedkey);
 	}
 	
 //	public static void main(String [] args){
@@ -337,9 +356,6 @@ public class ECS {
 //		}.start();
 //	}
 
-	public TreeMap<String, Server> getServers(){
-		return workingservers;
-	}
 	
 	public Metadata getMetaData(){
 		return metadata;
@@ -358,13 +374,16 @@ public class ECS {
 					Socket kvserver = null;
 		
 					int currentNode = 0;
+					
+					startServers();
+					
 					while(currentNode != numberOfNodes && (kvserver = ecsServer.accept()) != null){
 						logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");
 		
 						ServerConnection connection = new ServerConnection (kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
 						int receivedport = connection.init();
 						
-						for(Server server : workingservers.values()){
+						for(Server server : metadata.getServers().values()){
 							
 							if( receivedport == Integer.parseInt(server.port) && 
 									kvserver.getInetAddress().toString().equals("/" + server.ip)){
@@ -378,7 +397,7 @@ public class ECS {
 					}
 		
 					while(running);
-				
+					
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					logger.error(e.getMessage());
@@ -394,10 +413,32 @@ public class ECS {
 		logger.info("The server with ip:"+newworkingserver.ip + " and port:"+newworkingserver.port + " is picked as a new node");
 
 		//Recalculate and update the meta­data of the storage service
-		newworkingserver.hashedkey = ConsistentHashing.getHashedKey(newworkingserver.ip + newworkingserver.port);
-		workingservers.put(newworkingserver.hashedkey, newworkingserver);
+
+		metadata.add(newworkingserver);
 		idleservers.remove(newworkingserver);
 
 		return newworkingserver;
+	}
+
+	private void stopServers(){
+		for(Process proc : procs)
+			proc.destroy();
+	}
+	
+	private void startServers(){
+		Runtime run = Runtime.getRuntime(); 
+
+		Process proc = null;
+
+		for(Server server : metadata.getServers().values()){
+			try {
+
+				proc = run.exec("java -jar ./server.jar " + server.port);
+				procs.add(proc);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				System.out.println("failed");
+			}
+		}
 	}
 }

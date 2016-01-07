@@ -186,6 +186,9 @@ public class FailureDetector extends Thread{
 		int index = -1;
 		ArrayList<Member> members = this.members.getMembers();
 
+		if(members.size() == 1)
+			return;
+		
 		while((index = random.nextInt(members.size())) != -1){
 			String ip = members.get(index).ip;
 			int port = members.get(index).port;
@@ -223,6 +226,7 @@ public class FailureDetector extends Thread{
 	}
 	
 	public void terminate(){
+		server.close();
 		isstop = true;
 	}
 	

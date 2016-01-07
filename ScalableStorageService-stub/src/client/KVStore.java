@@ -150,7 +150,7 @@ public class KVStore implements KVCommInterface {
 		
 		if(metadata != null)
 		{
-			String[] correctServer = metadata.getServer(key);
+			String[] correctServer = metadata.getServerForKey(key);
 			
 			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port+"")))
 			{
@@ -204,7 +204,7 @@ public class KVStore implements KVCommInterface {
 		sentMessage.setKey(key);
 		
 		if(metadata != null){
-			String[] correctServer = metadata.getServer(key);
+			String[] correctServer = metadata.getServerForKey(key);
 			Server successor = metadata.getSuccessor(correctServer[2]);
 			Server sesuccessor = null;
 			if(successor != null){
@@ -257,7 +257,7 @@ public class KVStore implements KVCommInterface {
 	 * @throws Exception	
 	 */
 	private void reestablishConnection(String key) throws Exception{
-		String[] correctserver = metadata.getServer(key);
+		String[] correctserver = metadata.getServerForKey(key);
 		
 		if(correctserver != null)
 		{

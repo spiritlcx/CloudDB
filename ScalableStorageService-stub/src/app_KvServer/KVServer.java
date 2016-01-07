@@ -94,6 +94,7 @@ public class KVServer{
 				communicateECS();
 			}
 		};
+		
 		messageReceiver.start();
 
         if(!serverSocket.isClosed()) {
@@ -156,7 +157,7 @@ public class KVServer{
 				ArrayList<String> toRemove = null;
 
 				switch(message.getStatusType()){
-				case INIT:
+				case INIT:{
 					Metadata meta = message.getMetadata();
 					int size = message.getCacheSize();
 					String stra = message.getDisplacementStrategy();
@@ -164,19 +165,25 @@ public class KVServer{
 					initKVServer(meta, size, stra);
 
 					break;
-				case MOVE:
+				}
+				case MOVE:{
 					String from = message.getFrom();
 					String to = message.getTo();
 					String ip = message.getIp();
 					int port = message.getPort();
 					
 					toRemove = moveData(from, to, ip, port);
-					replicationManager.removeRepSesuccessor(toRemove);
 					break;
+				}
 				case RECEIVE:
 					HashMap<String, String> receivedPairs = receiveData();
-					replicationManager.addRepSesuccessor(receivedPairs);
 					break;
+				case REMOVE:{
+					String from = message.getFrom();
+					String to = message.getTo();
+					storageManager.removeData(from, to);
+					break;
+				}
 				case SHUTDOWN:
 					shutDown();
 					break;
@@ -186,10 +193,11 @@ public class KVServer{
 				case STOP:
 					stop();
 					break;
-				case UPDATE:
-					meta = message.getMetadata();
+				case UPDATE:{
+					Metadata meta = message.getMetadata();
 					setMetadata(meta);
 					break;
+				}
 				case WRITELOCK:
 					lock = !lock;
 					if(lock == false && toRemove != null)
@@ -213,7 +221,13 @@ public class KVServer{
     	logger.info("Initialize server ...");
     	
     	try {
-			clientSocket = new Socket("127.0.0.1", 40000);
+    		while(clientSocket == null){
+	    		try{
+	    			clientSocket = new Socket("127.0.0.1", 40000);
+	    		}catch(Exception e){
+
+	    		}
+    		}
 			ecsMsgHandler = new MessageHandler(clientSocket.getInputStream(),  clientSocket.getOutputStream(), logger);
 			
 			KVAdminMessage msg = new KVAdminMessage();
@@ -326,6 +340,8 @@ public class KVServer{
     	try {
 			serverSocket.close();
 			clientSocket.close();
+			replicaSocket.close();
+			failureDetector.terminate();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -358,7 +374,7 @@ public class KVServer{
      */
 
     
-    public ArrayList<String> moveData(String from, String to, String ip, int port) throws UnknownHostException, IOException{    	
+    private ArrayList<String> moveData(String from, String to, String ip, int port) throws UnknownHostException, IOException{    	
 
 		ArrayList<String> toRemove = new ArrayList<String>();
 
@@ -413,7 +429,11 @@ public class KVServer{
 		return toRemove;
     }
     
-    public HashMap<String, String> receiveData() throws IOException{
+    private void removeData(String from, String to){
+    	storageManager.removeData(from, to);
+    }
+    
+    private HashMap<String, String> receiveData() throws IOException{
 		serverMove = new ServerSocket(port-20);
 
 		KVAdminMessage preparedMessage = new KVAdminMessage();
@@ -524,7 +544,8 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-			kvserver.run(50004);
+			kvserver.run(Integer.parseInt(args[0]));
+
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");

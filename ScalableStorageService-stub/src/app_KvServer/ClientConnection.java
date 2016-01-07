@@ -162,7 +162,7 @@ public class ClientConnection implements Runnable {
 			return;
 		}
 		
-		String[] server = metadata.getServer(key);
+		String[] server = metadata.getServerForKey(key);
 
 		if(server != null && server[0].equals("127.0.0.1") && server[1].equals("" + clientSocket.getLocalPort())){
 			StatusType type = storageManager.put(key, value);

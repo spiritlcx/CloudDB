@@ -165,8 +165,6 @@ public class ServerConnection{
 			if(moveFinished.getStatusType() == StatusType.MOVEFINISH){
 
 			}
-
-			
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -175,6 +173,25 @@ public class ServerConnection{
 			e.printStackTrace();
 		}
 	}
+
+	public void removeData(String from, String to){
+		try {
+			KVAdminMessage moveMessage = new KVAdminMessage();
+			moveMessage.setStatusType(StatusType.REMOVE);
+			moveMessage.setFrom(from);
+			moveMessage.setTo(to);
+			
+			messageHandler.sendMessage(moveMessage.serialize().getMsg());
+
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 	
 	public void update(Metadata metadata){
 		KVAdminMessage updateMessage = new KVAdminMessage();

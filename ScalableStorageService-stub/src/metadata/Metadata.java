@@ -13,15 +13,22 @@ public class Metadata implements Serializable{
 	public static String start = "00000000000000000000000000000000";
 	public static String end = "ffffffffffffffffffffffffffffffff";
 
+	public Server getServer(String hashedkey){
+		return servers.get(hashedkey);
+	}
+	
+	public void removeServer(String hashedkey){
+		servers.remove(hashedkey);
+	}
 	
 	public TreeMap<String, Server> getServers(){
 		return servers;
 	}
-	
-	public void set(TreeMap<String, Server> servers){
-		this.servers = servers;
-	}
 
+	public Server getFirstServer(){
+		return servers.firstEntry().getValue();
+	}
+	
 	public Server getPredecessor(String hashedkey){
 		
 		if(servers.size() == 1)
@@ -86,7 +93,7 @@ public class Metadata implements Serializable{
 	 * @param key	The key that needs to be looked up.
 	 * @return		A tuple of the responsible server's address and port.
 	 */
-	public String[] getServer(String key)
+	public String[] getServerForKey(String key)
 	{
 		if(servers.size() == 1)
 			return new String [] {servers.lastEntry().getValue().ip, servers.lastEntry().getValue().port, servers.lastEntry().getValue().hashedkey};

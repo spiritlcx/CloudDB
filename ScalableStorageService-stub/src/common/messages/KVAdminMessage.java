@@ -16,6 +16,7 @@ public class KVAdminMessage extends Message{
 		SHUTDOWN,
 		MOVE, // successor will move data to processor
 		RECEIVE, // processor will prepare to receive data
+		REMOVE,
 		MOVEFINISH,
 		DATA,
 		UPDATE,
