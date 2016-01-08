@@ -9,13 +9,25 @@ public class LFUStrategy implements Strategy {
 	public LFUStrategy(){
 		keyrating = new HashMap<String, Integer>();
 	}
-	
+
 	/**
-	 * Gets the key which has the lowest rating. Rating
-	 * indicates how often the key was used.
+	 * Either inserts the key with a rating of 1
+	 * if it was not previously contained in the HashMap,
+	 * or increases the rating of the key by 1.
 	 */
 	@Override
-	public String get() {
+	public void add(String key) {
+		keyrating.put(key, 1);
+	}
+
+	@Override
+	public void update(String key) {
+		// TODO Auto-generated method stub
+		keyrating.put(key, keyrating.get(key) + 1);
+	}
+
+	@Override
+	public String remove() {
 		Integer lowestRating = Integer.MAX_VALUE;
 		String lowestKey = null;
 		
@@ -27,29 +39,7 @@ public class LFUStrategy implements Strategy {
 				lowestKey = key;
 			}
 		}
-		
+		keyrating.remove(lowestKey);
 		return lowestKey;
 	}
-
-	/**
-	 * Either inserts the key with a rating of 1
-	 * if it was not previously contained in the HashMap,
-	 * or increases the rating of the key by 1.
-	 */
-	@Override
-	public void add(String key) {
-		keyrating.put(key, 1);
-	}
-	@Override
-	public void remove(String key) {
-		// TODO Auto-generated method stub
-		keyrating.remove(key);
-	}
-
-	@Override
-	public void update(String key) {
-		// TODO Auto-generated method stub
-		keyrating.put(key, keyrating.get(key) + 1);
-	}
-
 }

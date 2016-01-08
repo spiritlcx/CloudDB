@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.util.HashMap;
 
 import metadata.Metadata;
+import store.StorageManager;
 
 import org.apache.log4j.*;
 
@@ -36,9 +37,6 @@ public class ClientConnection implements Runnable {
 	private InputStream input;
 	private OutputStream output;
 
-	private Strategy strategy;
-	private HashMap<String, String> keyvalue;
-	private Persistance persistance;
 	private Metadata metadata;
 
 	private MessageHandler messageHandler;
@@ -56,17 +54,14 @@ public class ClientConnection implements Runnable {
 	 * @param persistance Instance of Persictance class, which handles the reading and writing to the storage file.
 	 * @param metadata Metadata set of the server.
 	 */
-	public ClientConnection(Socket clientSocket, ServerSocket serverSocket, HashMap<String, String> keyvalue, int cacheSize, Strategy strategy, Persistance persistance, Metadata metadata, MessageHandler [] successors) {
+	public ClientConnection(Socket clientSocket, ServerSocket serverSocket, Metadata metadata) {
 		this.clientSocket = clientSocket;
 		this.serverSocket = serverSocket;
-		this.keyvalue = keyvalue;
 		this.isOpen = true;
-		this.strategy = strategy;
-		this.persistance = persistance;
 		this.metadata = metadata;
 		
-		storageManager = StorageManager.getInstance(keyvalue, metadata, strategy, cacheSize, persistance, logger);
-		replicationManager= ReplicationManager.getInstance(successors, logger);
+		storageManager = StorageManager.getInstance();
+		replicationManager= ReplicationManager.getInstance();
 	}
 	
 	/**
@@ -144,7 +139,7 @@ public class ClientConnection implements Runnable {
 			put(receivedMessage.getKey(), receivedMessage.getValue());
 			break;
 		case GET:
-			get(receivedMessage);
+			get(receivedMessage.getKey());
 			break;
 		default:
 			logger.error("No valid status.");
@@ -160,9 +155,8 @@ public class ClientConnection implements Runnable {
 		}else if(KVServer.lock){
 			sentMessage.setStatusType(StatusType.SERVER_WRITE_LOCK);			
 		}else{
-			Server server = metadata.getServerForKey(key);
 	
-			if(server != null && server.ip.equals("127.0.0.1") && server.port.equals("" + clientSocket.getLocalPort())){
+			if(isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), key)){
 				StatusType type = storageManager.put(key, value);
 				sentMessage.setStatusType(type);
 				replicationManager.replicate(type, key, value);
@@ -181,57 +175,48 @@ public class ClientConnection implements Runnable {
 			logger.error("Unable to send response!", e);
 		}
 	}
-	private void get(TextMessage receivedMessage){
+	private void get(String key){
 		TextMessage sentMessage = new TextMessage();
+		String value = null;
 
 		if(!KVServer.running.get()){
 			sentMessage.setStatusType(StatusType.SERVER_STOPPED);
 		}else{
-			if(storageManager.isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), receivedMessage.getKey()) || 
-					storageManager.isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), receivedMessage.getKey())){
-				
-				String value = null;
-				if(keyvalue.get(receivedMessage.getKey()) != null){
-					value = keyvalue.get(receivedMessage.getKey());
-				} else {
-					value = persistance.lookup(receivedMessage.getKey());
-					if(value != null){
-						persistance.remove(receivedMessage.getKey());
-						String keyToRemove = strategy.get();
-						if(keyToRemove != null){
-							String valueToRemove = keyvalue.get(keyToRemove);
-							persistance.store(keyToRemove, valueToRemove);
-							synchronized(keyvalue){
-								keyvalue.remove(keyToRemove);
-								}
-							synchronized(strategy){
-								strategy.remove(keyToRemove);
-							}
-						}
-						keyvalue.put(receivedMessage.getKey(), value);
-						strategy.add(receivedMessage.getKey());
-					}
-				}
-				if(value != null){
-					sentMessage.setStatusType(StatusType.GET_SUCCESS);
-					sentMessage.setKey(receivedMessage.getKey());
-					sentMessage.setValue(value);
-				} else {
+			
+			if(isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), key) ||
+					isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), key)){
+				value = storageManager.get(key);
+				if(value == null){
 					sentMessage.setStatusType(StatusType.GET_ERROR);
-					sentMessage.setKey(receivedMessage.getKey());				
+				}else{
+					sentMessage.setStatusType(StatusType.GET_SUCCESS);					
 				}
-			}
-			else{
+			}else{
 				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
-				sentMessage.setKey(receivedMessage.getKey());
 				sentMessage.setMetadata(metadata);				
 			}
 		}
+
+		sentMessage.setKey(key);
+		sentMessage.setValue(value);
+
 		try {
 			messageHandler.sendMessage(sentMessage.serialize().getMsg());
 		} catch (IOException e) {
 			logger.error("Unable to send response!", e);
 		}
+	}
+	
+	private boolean isCoordinator(String ip, String port, String key){
+		Server server = metadata.getServerForKey(key);
+		return (server.ip).equals(ip) && server.port.equals(port);
+	}
+	
+	private boolean isReplica(String ip, String port, String key){
+		Server server = metadata.getServerForKey(key);
+		Server successor = metadata.getSuccessor(server.hashedkey);
+		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
 
+		return successor!= null && ((sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port)) || (successor.ip.equals(ip) && successor.port.equals(port)));
 	}
 }

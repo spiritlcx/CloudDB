@@ -8,11 +8,7 @@ public class Server implements Comparator<Server>{
 	public String hashedkey;
 	public String from;
 	public String to;
-	
-	public Server(){
 		
-	}
-	
 	public Server(String ip, String port){
 		this.ip = ip;
 		this.port = port;

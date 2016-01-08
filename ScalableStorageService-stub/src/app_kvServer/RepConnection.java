@@ -8,6 +8,7 @@ import org.apache.log4j.Logger;
 
 import common.messages.MessageHandler;
 import common.messages.TextMessage;
+import store.StorageManager;
 
 public class RepConnection implements Runnable {
 	private ServerSocket replicaSocket;

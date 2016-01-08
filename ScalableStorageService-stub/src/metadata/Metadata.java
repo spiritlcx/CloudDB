@@ -17,11 +17,7 @@ public class Metadata{
 	public Server getServer(String hashedkey){
 		return servers.get(hashedkey);
 	}
-	
-	public void removeServer(String hashedkey){
-		servers.remove(hashedkey);
-	}
-	
+		
 	public TreeMap<String, Server> getServers(){
 		return servers;
 	}

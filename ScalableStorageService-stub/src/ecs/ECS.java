@@ -255,7 +255,7 @@ public class ECS {
 			}
 		}
 		
-		metadata.removeServer(server.hashedkey);
+		metadata.remove(server);
 			
 		for(ServerConnection connection : hashthreads.values()){
 			connection.update(metadata);
@@ -389,7 +389,7 @@ public class ECS {
 		
 					int currentNode = 0;
 					
-					startServers();
+//					startServers();
 					
 					while(currentNode != numberOfNodes && (kvserver = ecsServer.accept()) != null){
 						logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");

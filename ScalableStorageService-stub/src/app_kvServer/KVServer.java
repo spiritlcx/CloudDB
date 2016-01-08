@@ -20,6 +20,8 @@ import ecs.ConsistentHashing;
 import ecs.Server;
 import logger.LogSetup;
 import metadata.Metadata;
+import store.KeyValue;
+import store.StorageManager;
 import strategy.Strategy;
 import strategy.StrategyFactory;
 
@@ -27,13 +29,11 @@ public class KVServer{
 	private static Logger logger = Logger.getRootLogger();
 	
 	private int port;
-	private int cacheSize;
-	private Strategy strategy;
 	//serve clients
     private ServerSocket serverSocket;
     //serve movement of data
     private ServerSocket serverMove;
-    //serve replications
+    //serve replicationsF
     private ServerSocket replicaSocket;
     //connect to ECS
     private Socket clientSocket;
@@ -43,14 +43,12 @@ public class KVServer{
     public static AtomicBoolean running = new AtomicBoolean(false);
     private boolean shutdown;
     public static boolean lock;
-    private HashMap<String, String> keyvalue;
-    private Persistance persistance;
+
     private Metadata metadata;
         
 	private StorageManager storageManager;
 
 	private MessageHandler [] successors = new MessageHandler[2];
-	private ReplicationManager replicationManager;
 	private FailureDetector failureDetector;
 	
     /**
@@ -73,7 +71,6 @@ public class KVServer{
 		}
 		shutdown = false;
 		running.set(false);
-		keyvalue = new HashMap<String, String>();
 	}
     /**
      * Initializes and starts the server. 
@@ -113,7 +110,7 @@ public class KVServer{
 			try {
 				Socket client = serverSocket.accept();
                	ClientConnection connection = 
-                		new ClientConnection(client, serverSocket, keyvalue, cacheSize, strategy, persistance, metadata, successors);
+                		new ClientConnection(client, serverSocket, metadata);
                (new Thread(connection)).start();
                 
                 logger.info("Connected to " 
@@ -233,8 +230,6 @@ public class KVServer{
 			KVAdminMessage msg = new KVAdminMessage();
 			msg.setStatusType(StatusType.RECEIVED);
 			msg.setPort(port);
-
-			this.persistance = new Persistance("127.0.0.1", port);
 			
 			ecsMsgHandler.sendMessage(msg.serialize().getMsg());
 						
@@ -255,8 +250,7 @@ public class KVServer{
     
     public void initKVServer(Metadata metadata, int cacheSize, String displacementStrategy){
     	this.setMetadata(metadata);
-    	this.cacheSize = cacheSize;
-		this.strategy = StrategyFactory.getStrategy(displacementStrategy);
+
 		shutdown = false;
 
 		try {
@@ -279,8 +273,8 @@ public class KVServer{
 			e.printStackTrace();
 		}
 		
-		storageManager = StorageManager.getInstance(keyvalue, metadata, strategy, cacheSize, persistance, logger);
-    	replicationManager = ReplicationManager.getInstance(successors, logger);
+		storageManager = StorageManager.getInstance(""+port, displacementStrategy, cacheSize);
+    	ReplicationManager.getInstance(successors);
 		
 		RepConnection repConnection = new RepConnection(replicaSocket, storageManager, logger);
 		Thread thread = new Thread(repConnection);
@@ -306,7 +300,6 @@ public class KVServer{
             	logger.error("Port " + port + " is already bound!");
             }
         }
-
     	
     	synchronized(running){
     		running.set(true);
@@ -392,33 +385,11 @@ public class KVServer{
 
 		int count = 0;
 		
-		synchronized(keyvalue){
-			for(String key : keyvalue.keySet()){
-				String hashedkey= ConsistentHashing.getHashedKey(key);
-				
-				if(to.compareTo(from) < 0){
-					if(hashedkey.compareTo(from) > 0 || hashedkey.compareTo(to) < 0){
-						count++;
-						String value = keyvalue.get(key);
-							data += (key + " " + value);
-						data += ":";									
-					}
-					continue;
-				}
-				
-				if(hashedkey.compareTo(from) > 0 && hashedkey.compareTo(to) < 0){
-					count++;
-					String value = keyvalue.get(key);
-						data += (key + " " + value);
-					data += ".";
-				}
-			}
+		ArrayList<KeyValue> toMove = storageManager.get(from, to);
+		for(KeyValue pair : toMove){
+			data += (pair.getKey() + " " + pair.getValue() + ":");
 		}
 
-//		synchronized(persistance){
-//			persistance.
-//		}
-		
 		dataMessage.setData(data);
 
 		senderHandler.sendMessage(dataMessage.serialize().getMsg());
@@ -433,11 +404,7 @@ public class KVServer{
 		
     }
     
-    private void removeData(String from, String to){
-    	storageManager.removeData(from, to);
-    }
-    
-    private HashMap<String, String> receiveData() throws IOException{
+    private void receiveData() throws IOException{
 		serverMove = new ServerSocket(port-20);
 
 		KVAdminMessage preparedMessage = new KVAdminMessage();
@@ -465,14 +432,7 @@ public class KVServer{
 				for(String pair : pairs){
 					String[] kvpair = pair.split(" ");
 					if(kvpair.length == 2){
-						receivedPairs.put(kvpair[0], kvpair[1]);
-						if(keyvalue.size() < cacheSize){
-							synchronized(keyvalue){
-								keyvalue.put(kvpair[0], kvpair[1]);
-							}
-						}else{
-							persistance.store(kvpair[0], kvpair[1]);
-						}
+						storageManager.put(kvpair[0], kvpair[1]);
 					}
 				}
 			   	logger.info(pairs.length + " key value pairs are received");
@@ -485,23 +445,9 @@ public class KVServer{
 		}
 
 		serverMove.close();
-		clientMove.close();
-		
-		return receivedPairs;
+		clientMove.close();		
     }
-    
-    public void removeData(ArrayList<String> toRemove){
-		if(lock == true){
-			for(String key: toRemove){
-				synchronized(keyvalue){
-					keyvalue.remove(key);
-				}
-			}
-		}
-		logger.info(toRemove.size() + "key vlaue pairs are removed");
-
-    }
-    
+        
     /**
      * Update the meta­data repository of this server 
      */
@@ -555,8 +501,8 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-			kvserver.run(Integer.parseInt(args[0]));
-//			kvserver.run(50007);
+//			kvserver.run(Integer.parseInt(args[0]));
+			kvserver.run(50000);
 
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
