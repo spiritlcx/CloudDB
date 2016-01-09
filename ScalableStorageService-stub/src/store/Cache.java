@@ -2,6 +2,7 @@ package store;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map.Entry;
 
 import strategy.Strategy;
@@ -60,10 +61,12 @@ public class Cache extends Storage{
 	}
 	
 	public void remove(String from, String to){
-		for(Entry<String, String> entry : keyvalue.entrySet()){
-			if(inRange(entry.getKey(), from, to))
-				keyvalue.remove(entry.getKey());
-		}		
+		Iterator<String> it = keyvalue.keySet().iterator();
+		while(it.hasNext()){
+			String key = it.next();
+			if(inRange(key, from, to))
+				it.remove();
+		}
 	}
 	
 	public KeyValue remove(){

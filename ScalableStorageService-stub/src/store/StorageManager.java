@@ -31,9 +31,9 @@ public class StorageManager {
 	
 	public ArrayList<KeyValue> get(String from, String to){
 		ArrayList<KeyValue> result = new ArrayList<KeyValue>();
-
-		cache.get(from, to);
-		persistance.get(from, to);
+		
+		result.addAll(cache.get(from, to));
+		result.addAll(persistance.get(from, to));
 		
 		return result;
 	}
@@ -42,7 +42,19 @@ public class StorageManager {
 		String value = cache.get(key);
 		if(value != null)
 			return value;
-		return persistance.get(key);
+		value = persistance.get(key);
+		if(cache.isFull()){
+			KeyValue topersist = cache.remove();
+			persistance.put(topersist.getKey(), topersist.getValue());
+		}
+
+		try {
+			cache.put(key, value);
+		} catch (CacheFullException e) {
+			// TODO Auto-generated catch block
+			return null;
+		}
+		return value;
 	}
 	
 	public void removeData(String from, String to){
@@ -50,9 +62,13 @@ public class StorageManager {
 		persistance.remove(from, to);
 	}
 	
-	public StatusType put(String key, String value){
+	public synchronized StatusType put(String key, String value){
 		StatusType type = StatusType.PUT_ERROR;
 
+		if(key == null || value == null){
+			return type;
+		}
+		
 		if(value.equals("null")){
 			String toremove = cache.remove(key);
 			if(toremove == null){
@@ -66,9 +82,11 @@ public class StorageManager {
 		}else{
 			if(get(key) != null){
 				type = StatusType.PUT_UPDATE;
+				put(key, "null");
 			}else{
 				type = StatusType.PUT_SUCCESS;				
 			}
+
 			try{
 				if(cache.isFull()){
 					KeyValue toremove = cache.remove();
@@ -84,7 +102,22 @@ public class StorageManager {
 			}catch(Exception e){
 				type = StatusType.PUT_ERROR;
 			}
+			
 		}
 		return type;
 	}	
+	public static void main(String [] args){
+		StorageManager storageManager = new StorageManager("aaa", "FIFO", 100);
+//		for(int i = 0; i < 200000; i++){
+//			storageManager.put(i+"", i+"");
+//		}
+		System.out.println(ConsistentHashing.getHashedKey("aa"));
+		System.out.println(ConsistentHashing.getHashedKey("bb"));
+
+		ArrayList<KeyValue> m = storageManager.get(ConsistentHashing.getHashedKey("bb"), ConsistentHashing.getHashedKey("aa"));
+		for(KeyValue ke : m){
+			System.out.println(ke.getKey());
+		}
+		
+	}
 }

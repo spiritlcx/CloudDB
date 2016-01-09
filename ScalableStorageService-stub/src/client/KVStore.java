@@ -30,10 +30,7 @@ public class KVStore implements KVCommInterface {
 	
 	private boolean running;
 	
-	private Socket clientSocket;
-	private OutputStream output;
- 	private InputStream input;
- 	
+	private Socket clientSocket; 	
 	private Metadata metadata;
  	
  	private String address;
@@ -99,9 +96,7 @@ public class KVStore implements KVCommInterface {
 	public void connect() throws IOException, UnknownHostException {
 		try {
 			clientSocket = new Socket(address, port);
-			output = clientSocket.getOutputStream();
-			input = clientSocket.getInputStream();
-			messageHandler = new MessageHandler(input, output, logger);
+			messageHandler = new MessageHandler(clientSocket, logger);
 			
 			run();
 			logger.info("Connection established");

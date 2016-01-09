@@ -3,6 +3,7 @@ package ecs;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 import java.net.UnknownHostException;
 
 import org.apache.log4j.Logger;
@@ -26,14 +27,15 @@ public class ServerConnection{
 	 * @param displacementStrategy	displacementStrategy of the KVServer.
 	 * @param metadata	Metadata of the ECS,
 	 * @param logger	Logger of the ECS.
+	 * @throws IOException 
 	 */
 
-	public ServerConnection(final InputStream input,final OutputStream output, final int cacheSize, final String displacementStrategy, final Metadata metadata, final Logger logger){
+	public ServerConnection(final Socket socket, final int cacheSize, final String displacementStrategy, final Metadata metadata, final Logger logger) throws IOException{
 	
 		this.cacheSize = cacheSize;
 		this.displacementStrategy = displacementStrategy;
 		this.metadata = metadata;
-		messageHandler = new MessageHandler(input, output, logger);
+		messageHandler = new MessageHandler(socket, logger);
 	}
 	
 	/**

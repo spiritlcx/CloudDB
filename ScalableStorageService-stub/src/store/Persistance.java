@@ -83,7 +83,7 @@ public class Persistance extends Storage{
 		try {
 			reader = new BufferedReader(new FileReader(file));
 			String temp = null;
-			if((temp = reader.readLine())!=null){
+			while((temp = reader.readLine())!=null){
 				String [] kvpair = temp.split(",", 2);
 				if(kvpair.length == 2){
 					results.add(new KeyValue(kvpair[0], kvpair[1]));

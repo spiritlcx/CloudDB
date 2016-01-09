@@ -3,6 +3,7 @@ package common.messages;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 
 import org.apache.log4j.Logger;
 
@@ -10,14 +11,16 @@ public class MessageHandler {
 
 	private OutputStream output;
  	private InputStream input;
+ 	private Socket socket;
 	private Logger logger;;
 	
 	private static final int BUFFER_SIZE = 1024;
 	private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
 
-	public MessageHandler(InputStream input, OutputStream output, Logger logger){
-		this.input = input;
-		this.output = output;
+	public MessageHandler(Socket socket, Logger logger) throws IOException{
+		this.input = socket.getInputStream();
+		this.output = socket.getOutputStream();
+		this.socket = socket;
 		this.logger = logger;
 	}
 
@@ -102,4 +105,13 @@ public class MessageHandler {
 		logger.info("Send message:\t '" + msg + "'");
     }
 
+	public void close(){
+		try {
+			socket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			logger.error("The messagehandler cannot be closed");
+		}
+	}
+	
 }

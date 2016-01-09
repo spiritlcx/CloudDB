@@ -275,12 +275,11 @@ public class ECS {
 		
 				if(idleservers.size() != 0){
 					Server newworkingserver = getRandomNode();
-					metadata.add(newworkingserver);
 					Runtime run = Runtime.getRuntime(); 
 
 					Process proc;
 					try {
-						proc = run.exec("java -jar ./server.jar " + newworkingserver.port);
+						proc = run.exec("java -jar ./ms3-server.jar " + newworkingserver.port);
 						procs.add(proc);
 
 					} catch (IOException e1) {
@@ -294,7 +293,7 @@ public class ECS {
 						Socket kvserver = null;
 						while((kvserver = ecsServer.accept()) != null){					
 //							if(kvserver.getInetAddress().toString().equals("/" + newworkingserver.ip) && kvserver.getPort() == Integer.parseInt(newworkingserver.port)){
-							ServerConnection connection = new ServerConnection(kvserver.getInputStream(), kvserver.getOutputStream(),newcacheSize, displacementStrategy, metadata, logger);
+							ServerConnection connection = new ServerConnection(kvserver, newcacheSize, displacementStrategy, metadata, logger);
 							hashthreads.put(newworkingserver.hashedkey, connection);
 				
 							int port = connection.init();
@@ -348,6 +347,8 @@ public class ECS {
 					}
 					
 					suserver.releaseWriteLock();
+				}else{
+					logger.info("no server available");
 				}
 			}
 		}.start();
@@ -389,12 +390,12 @@ public class ECS {
 		
 					int currentNode = 0;
 					
-//					startServers();
+					startServers();
 					
 					while(currentNode != numberOfNodes && (kvserver = ecsServer.accept()) != null){
 						logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");
 		
-						ServerConnection connection = new ServerConnection (kvserver.getInputStream(), kvserver.getOutputStream(),cacheSize, displacementStrategy, metadata, logger);
+						ServerConnection connection = new ServerConnection (kvserver, cacheSize, displacementStrategy, metadata, logger);
 						int receivedport = connection.init();
 						
 						for(Server server : metadata.getServers().values()){

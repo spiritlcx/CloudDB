@@ -5,19 +5,17 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.ServerSocket;
-import java.util.HashMap;
 
 import metadata.Metadata;
 import store.StorageManager;
 
 import org.apache.log4j.*;
 
+import app_kvServer.ServerState.State;
 import common.messages.KVMessage.StatusType;
 import common.messages.MessageHandler;
 import common.messages.TextMessage;
 import ecs.Server;
-import strategy.Strategy;
-
 
 /**
  * Represents a connection end point for a particular client that is 
@@ -34,8 +32,6 @@ public class ClientConnection implements Runnable {
 	
 	private Socket clientSocket;
 	private ServerSocket serverSocket;
-	private InputStream input;
-	private OutputStream output;
 
 	private Metadata metadata;
 
@@ -69,11 +65,8 @@ public class ClientConnection implements Runnable {
 	 * Loops until the connection is closed or aborted by the client.
 	 */
 	public void run() {
-		try {
-			output = clientSocket.getOutputStream();
-			input = clientSocket.getInputStream();
-		
-			messageHandler = new MessageHandler(input, output, logger);
+		try {		
+			messageHandler = new MessageHandler(clientSocket, logger);
 			
 			TextMessage welcomemsg = new TextMessage("Connection to MSRG Echo server established: " 
 					+ clientSocket.getLocalAddress() + " / "
@@ -116,8 +109,6 @@ public class ClientConnection implements Runnable {
 			
 			try {
 				if (clientSocket != null) {
-					input.close();
-					output.close();
 					clientSocket.close();
 				}
 			} catch (IOException ioe) {
@@ -150,9 +141,9 @@ public class ClientConnection implements Runnable {
 	private void put(String key, String value){
 		TextMessage sentMessage = new TextMessage();
 
-		if(!KVServer.running.get()){
+		if(KVServer.state.getState() == State.STOP){
 			sentMessage.setStatusType(StatusType.SERVER_STOPPED);
-		}else if(KVServer.lock){
+		}else if(KVServer.state.getState() == State.LOCK){
 			sentMessage.setStatusType(StatusType.SERVER_WRITE_LOCK);			
 		}else{
 	
@@ -179,7 +170,7 @@ public class ClientConnection implements Runnable {
 		TextMessage sentMessage = new TextMessage();
 		String value = null;
 
-		if(!KVServer.running.get()){
+		if(KVServer.state.getState() == State.STOP){
 			sentMessage.setStatusType(StatusType.SERVER_STOPPED);
 		}else{
 			

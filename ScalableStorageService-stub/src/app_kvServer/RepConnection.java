@@ -16,8 +16,14 @@ public class RepConnection implements Runnable {
 	private StorageManager storageManager;
 	
 	
-	public RepConnection(ServerSocket replicaSocket, StorageManager storageManager, Logger logger){
-		this.replicaSocket = replicaSocket;
+	public RepConnection(int port, StorageManager storageManager, Logger logger){
+		try {
+			replicaSocket = new ServerSocket(port+20);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 		this.storageManager = storageManager;
 		this.logger = logger;
 	}
@@ -34,7 +40,7 @@ public class RepConnection implements Runnable {
 						byte [] message = null;
 						MessageHandler serverMsgHandler = null;
 						try {
-							serverMsgHandler = new MessageHandler(newserver.getInputStream(), newserver.getOutputStream(), logger);
+							serverMsgHandler = new MessageHandler(newserver, logger);
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							logger.error(e.getMessage());
@@ -57,5 +63,13 @@ public class RepConnection implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}	
+	}
+	public void close(){
+		try {
+			replicaSocket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 }

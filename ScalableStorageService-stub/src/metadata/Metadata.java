@@ -38,6 +38,7 @@ public class Metadata{
 	}
 	
 	public Server getSuccessor(String hashedkey){
+		System.out.println(servers.size());
 		if(servers.size() == 1)
 			return null;
 		if(hashedkey.equals(servers.lastKey())){
