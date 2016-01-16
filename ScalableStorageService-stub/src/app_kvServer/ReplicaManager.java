@@ -1,34 +1,54 @@
 package app_kvServer;
 
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.TreeSet;
 
 import store.StorageManager;
 
 public class ReplicaManager {
-	private StorageManager storageManager;
+//	private StorageManager storageManager;
 	private Timestamp valueTimestamp;
 	private Timestamp replicaTimestamp;
 	private Timestamp [] tableTimestamp;
 	private int identifier;
 	private Log log;
 	
+	public ReplicaManager(int identifier, int size){
+		this.identifier = identifier;
+		valueTimestamp = new Timestamp(size);
+		replicaTimestamp = new Timestamp(size);
+		tableTimestamp = new Timestamp[size];
+		for(int i = 0; i < size; i++){
+			tableTimestamp[i] = new Timestamp(size);
+		}
+		log = new Log();
+
+	}
+	
+	public GossipMessage getGossip(){
+		GossipMessage message = new GossipMessage();
+		message.identifier = identifier;
+		message.replicaLog = log;
+		message.replicaTimestmap = replicaTimestamp;
+		return message;
+	}
+	
 	public void query(Operation operation){
 		if(operation.prev.compare(valueTimestamp) < 0){
-			String value = storageManager.get(operation.key);
+//			String value = storageManager.get(operation.key);
 		}
 	}
 
-	public void receiveUpdate(Update update){
+	public Timestamp receiveUpdate(Operation operation){
 		//update timestamp by plus 1 in this replicaManager position in the vector
-		Timestamp ts = new Timestamp(update.prev);
+		Timestamp ts = new Timestamp(operation.prev);
 		ts.update(identifier);
 		replicaTimestamp.update(ts, identifier);
 
-		Log.Record record = log.new Record(identifier, ts, update.operation, update.prev);
+		Log.Record record = log.new Record(identifier, ts, operation, operation.prev);
 		log.add(record);
 		update();
+		return ts;
 	}
 	
 	public void receiveGossip(GossipMessage gossipMessage){
@@ -41,7 +61,10 @@ public class ReplicaManager {
 		Iterator<Log.Record> it = gossipRecords.iterator();
 		while(it.hasNext()){
 			Log.Record record = (Log.Record)it.next();
-			if(replicaTimestamp.compare(record.uprev) < 0){
+			System.out.println(replicaTimestamp);
+			System.out.println(record.ts);
+
+			if(replicaTimestamp.compare(record.ts) < 0){
 				log.add(record);
 			}
 		}
@@ -53,13 +76,14 @@ public class ReplicaManager {
 		eliminate();
 	}
 
-	public void update(){
+	private void update(){
 		Iterator<Log.Record> it = log.getRecords().iterator();
 		while(it.hasNext()){
 			Log.Record record = (Log.Record)it.next();
 			if(record.uprev.compare(valueTimestamp) < 0){
 				Operation operation = record.uoperation;
-				storageManager.put(operation.key, operation.value);
+				System.out.println(operation.key + " is inserted");
+//				storageManager.put(operation.key, operation.value);
 				valueTimestamp.merge(record.uprev);
 			}else{
 				return;
@@ -68,7 +92,7 @@ public class ReplicaManager {
 	}
 	
 	//eliminate records in the log
-	public void eliminate(){
+	private void eliminate(){
 		Iterator<Log.Record> it = log.getRecords().iterator();
 		while(it.hasNext()){
 			Log.Record record = (Log.Record)it.next();
@@ -81,10 +105,28 @@ public class ReplicaManager {
 				it.remove();
 		}
 	}
-	
-	public void applyUpdate(){
+
+	public static void main(String [] args){
+		ReplicaManager r1 = new ReplicaManager(0, 3);
+		ReplicaManager r2 = new ReplicaManager(1, 3);
+		ReplicaManager r3 = new ReplicaManager(2, 3);
+
+		Operation update = new Operation();
+		update.key = "aa";
+		update.value = "bb";
+		update.prev = new Timestamp(3);
+		Timestamp ts = r1.receiveUpdate(update);
+		
+		Operation update1 = new Operation();
+		update1.key = "bb";
+		update1.value = "bb";
+		update1.prev = ts;
+		
+		r2.receiveUpdate(update1);
+		r2.receiveGossip(r1.getGossip());
 		
 	}
+
 }
 
 class GossipMessage{
@@ -93,18 +135,10 @@ class GossipMessage{
 	Log replicaLog;
 }
 
-class Update{
-	int operationId;
-	Operation operation;
-	Timestamp prev;
-}
-
 class Operation{
-	enum Type{query, update};
 	String key;
 	String value;
 	Timestamp prev;
-	Type type;
 }
 
 class Log{
@@ -139,7 +173,7 @@ class Log{
 		Id uid;
 		@Override
 		public int compareTo(Object o) {
-			Timestamp other = (Timestamp)o;
+			Timestamp other = ((Record)o).uprev;
 			return uprev.compare(other);
 		}
 		
@@ -213,5 +247,14 @@ class Timestamp{
 	}
 	public int [] getVector(){
 		return vector;
+	}
+	
+	@Override
+	public String toString(){
+		String s = "";
+		for(int v : vector){
+			s += (v + " ");
+		}
+		return s;
 	}
 }
