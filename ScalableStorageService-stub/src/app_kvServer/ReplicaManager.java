@@ -44,7 +44,7 @@ public class ReplicaManager {
 		Timestamp ts = new Timestamp(operation.prev);
 		ts.update(identifier);
 		replicaTimestamp.update(ts, identifier);
-
+		
 		Log.Record record = log.new Record(identifier, ts, operation, operation.prev);
 		log.add(record);
 		update();
@@ -61,10 +61,7 @@ public class ReplicaManager {
 		Iterator<Log.Record> it = gossipRecords.iterator();
 		while(it.hasNext()){
 			Log.Record record = (Log.Record)it.next();
-			System.out.println(replicaTimestamp);
-			System.out.println(record.ts);
-
-			if(replicaTimestamp.compare(record.ts) < 0){
+			if(!(record.ts.compare(replicaTimestamp) < 0)){
 				log.add(record);
 			}
 		}
@@ -80,11 +77,12 @@ public class ReplicaManager {
 		Iterator<Log.Record> it = log.getRecords().iterator();
 		while(it.hasNext()){
 			Log.Record record = (Log.Record)it.next();
+			
 			if(record.uprev.compare(valueTimestamp) < 0){
 				Operation operation = record.uoperation;
 				System.out.println(operation.key + " is inserted");
 //				storageManager.put(operation.key, operation.value);
-				valueTimestamp.merge(record.uprev);
+				valueTimestamp.merge(record.ts);
 			}else{
 				return;
 			}
@@ -98,7 +96,7 @@ public class ReplicaManager {
 			Log.Record record = (Log.Record)it.next();
 			boolean flag = true;
 			for(Timestamp timestamp : tableTimestamp){
-				if(record.ts.compare(timestamp) > 0)
+				if(!(record.ts.compare(timestamp) < 0))
 					flag = false;
 			}
 			if(flag)
@@ -122,11 +120,19 @@ public class ReplicaManager {
 		update1.value = "bb";
 		update1.prev = ts;
 		
-		r2.receiveUpdate(update1);
+		ts = r2.receiveUpdate(update1);
 		r2.receiveGossip(r1.getGossip());
+
+		Operation update2 = new Operation();
+		update2.key = "cc";
+		update2.value = "bb";
+		update2.prev = ts;
+
+		r3.receiveUpdate(update2);
+//		r3.receiveGossip(r2.getGossip());
+		r3.receiveGossip(r1.getGossip());
 		
 	}
-
 }
 
 class GossipMessage{
@@ -239,7 +245,6 @@ class Timestamp{
 		}else{
 			return 0;
 		}
-		
 	}
 	
 	public int length(){
