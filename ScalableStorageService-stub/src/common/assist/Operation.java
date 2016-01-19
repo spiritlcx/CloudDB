@@ -4,7 +4,8 @@ public class Operation{
 	public String key;
 	public String value;
 	public Timestamp prev;
-
+	public String sequence;
+	
 	@Override
 	public String toString(){
 		String s = "";

@@ -1,5 +1,8 @@
 package store;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.TreeSet;
+
 import common.messages.KVMessage.StatusType;
 import ecs.ConsistentHashing;
 
@@ -43,9 +46,12 @@ public class StorageManager {
 		if(value != null)
 			return value;
 		value = persistance.get(key);
+		if(value == null)
+			return null;
 		if(cache.isFull()){
 			KeyValue topersist = cache.remove();
 			persistance.put(topersist.getKey(), topersist.getValue());
+			persistance.remove(key);
 		}
 
 		try {
@@ -63,6 +69,7 @@ public class StorageManager {
 	}
 	
 	public synchronized StatusType put(String key, String value){
+
 		StatusType type = StatusType.PUT_ERROR;
 
 		if(key == null || value == null){
@@ -88,36 +95,42 @@ public class StorageManager {
 			}
 
 			try{
+
 				if(cache.isFull()){
+
 					KeyValue toremove = cache.remove();
+
 					if(toremove != null){
 						cache.put(key, value);
 						persistance.put(toremove.getKey(), toremove.getValue());
 					}else{
 						persistance.put(key, value);
 					}
+
 				}else{
 					cache.put(key, value);
 				}
 			}catch(Exception e){
 				type = StatusType.PUT_ERROR;
 			}
-			
 		}
+		System.out.println(type);
 		return type;
 	}	
 	public static void main(String [] args){
-		StorageManager storageManager = new StorageManager("aaa", "FIFO", 100);
-//		for(int i = 0; i < 200000; i++){
+		
+//		StorageManager storageManager = new StorageManager("aaa", "FIFO", 3);
+//		for(int i = 0; i < 200; i++){
 //			storageManager.put(i+"", i+"");
 //		}
-		System.out.println(ConsistentHashing.getHashedKey("aa"));
-		System.out.println(ConsistentHashing.getHashedKey("bb"));
 
-		ArrayList<KeyValue> m = storageManager.get(ConsistentHashing.getHashedKey("bb"), ConsistentHashing.getHashedKey("aa"));
-		for(KeyValue ke : m){
-			System.out.println(ke.getKey());
-		}
+//		System.out.println(ConsistentHashing.getHashedKey("aa"));
+//		System.out.println(ConsistentHashing.getHashedKey("bb"));
+//
+//		ArrayList<KeyValue> m = storageManager.get(ConsistentHashing.getHashedKey("bb"), ConsistentHashing.getHashedKey("aa"));
+//		for(KeyValue ke : m){
+//			System.out.println(ke.getKey());
+//		}
 		
 	}
 }

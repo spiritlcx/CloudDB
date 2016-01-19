@@ -30,7 +30,10 @@ public class Cache extends Storage{
 		this.size = size;
 		strategy = StrategyFactory.getStrategy(strategyName);
 	}
-	
+
+	public int size(){
+		return keyvalue.size();
+	}
 	public boolean isFull(){
 		return size == keyvalue.size();
 	}

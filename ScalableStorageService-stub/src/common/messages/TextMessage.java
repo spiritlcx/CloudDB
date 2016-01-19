@@ -21,6 +21,7 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 	private Timestamp prev;
 	private StatusType statusType;
 	private Metadata metadata;
+	private String sequence;
 	public Timestamp getPrev() {
 		return prev;
 	}
@@ -128,13 +129,13 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 		case GET_SUCCESS:
 			return new TextMessage("{StatusType: GET_SUCCESS, key:" + key + ", value:" + value + ",prev:"+prev +"}");
 		case PUT:
-			return new TextMessage("{StatusType: PUT, key:" + key + ", value:" + value +",prev:"+prev +"}");
+			return new TextMessage("{StatusType: PUT, key:" + key + ", value:" + value +",prev:"+prev + ",sequence:"+sequence +"}");
 		case PUT_SUCCESS:
 			return new TextMessage("{StatusType: PUT_SUCCESS, key:" + key + ", value:" + value +", prev:"+prev +"}");
 		case PUT_UPDATE:
 			return new TextMessage("{StatusType: PUT_UPDATE, key:" + key + ", value:" + value +", prev:"+prev +"}");
 		case BLOCKED:
-			return new TextMessage("{StatusType: BLOCKED, key:" + key + ", value:" + value +", prev:"+prev +"}");			
+			return new TextMessage("{StatusType: BLOCKED, key:" + key + ", value:" + value +", prev:"+prev +"}");
 		case PUT_ERROR:
 			return new TextMessage("{StatusType: PUT_ERROR, key:" + key + ", value:" + value +", prev:"+prev +"}");
 		case DELETE_SUCCESS:
@@ -188,6 +189,8 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 				}
 			}else if(keyvalue[0].trim().equals("prev")){
 				demessage.setPrev(Timestamp.deserialize(keyvalue[1].trim()));
+			}else if(keyvalue[0].trim().equals("sequence")){
+				demessage.setSequence(keyvalue[1].trim());
 			}else if(keyvalue[0].trim().equals("metadata")){
 				Metadata tempdata = new Metadata();
 				
@@ -219,6 +222,14 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 
 	public void setMetadata(Metadata metadata) {
 		this.metadata = metadata;
+	}
+
+	public String getSequence() {
+		return sequence;
+	}
+
+	public void setSequence(String sequence) {
+		this.sequence = sequence;
 	}
 	
 }

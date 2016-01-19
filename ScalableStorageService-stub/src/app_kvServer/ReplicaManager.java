@@ -38,15 +38,23 @@ public class ReplicaManager extends Thread{
 	private MessageHandler [] messageSender;
 	private ArrayList<OperationHandler> updateQueue = new ArrayList<OperationHandler>();
 	private ArrayList<OperationHandler> queryQueue = new ArrayList<OperationHandler>();
+
+	private TreeSet<String> executedTable = new TreeSet<String>();
 	
 	private ServerSocket server;
 	public void run(){
 
 		//build server
+		try {
+			server = new ServerSocket(port-100-identifier*10);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
 		new Thread(){
 			public void run(){
 				try {
-					server = new ServerSocket(port-100-identifier*10);
 					Socket client = null;
 					while((client = server.accept()) != null){
 						if(messageReceiver[0] == null){
@@ -237,7 +245,6 @@ public class ReplicaManager extends Thread{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 	}
 	
 	public Timestamp receiveUpdate(OperationHandler operationHandler){
@@ -249,15 +256,15 @@ public class ReplicaManager extends Thread{
 		replicaTimestamp.update(identifier);
 		ts.update(replicaTimestamp, identifier);
 		
-		Log.Record record = log.new Record(identifier, ts, operation, operation.prev);
+		Log.Record record = log.new Record(identifier, ts, operation, operation.prev, operation.sequence);
 		log.add(record);
 
 		TextMessage sentMessage = new TextMessage();
 		if(record.uprev.compare(valueTimestamp) < 0){
 			StatusType type = storageManager.put(operation.key, operation.value);
-			valueTimestamp.merge(record.ts);
-			
+			valueTimestamp.merge(record.ts);			
 			sentMessage.setStatusType(type);
+			executedTable.add(operation.sequence);
 		}else{
 			sentMessage.setStatusType(StatusType.BLOCKED);
 			updateQueue.add(operationHandler);
@@ -312,13 +319,12 @@ public class ReplicaManager extends Thread{
 		Iterator<Log.Record> it = log.getRecords().iterator();
 		while(it.hasNext()){
 			Log.Record record = (Log.Record)it.next();
-			
-			if(record.uprev.compare(valueTimestamp) < 0){
+
+			if(record.uprev.compare(valueTimestamp) < 0 && !executedTable.contains(record.sequence)){
 				Operation operation = record.uoperation;
 				storageManager.put(operation.key, operation.value);
-				valueTimestamp.merge(record.ts);				
-			}else{
-				return;
+				executedTable.add(record.sequence);
+				valueTimestamp.merge(record.ts);
 			}
 		}
 
@@ -421,7 +427,6 @@ class GossipMessage{
 	
 	public static GossipMessage deserialize(String s){
 		GossipMessage gossipMessage = new GossipMessage();
-		System.out.println(s);
 		String [] elements = s.split(",", 3);
 		for(String element : elements){
 			String [] contents = element.split("::");
@@ -467,17 +472,18 @@ class Log{
 		public Record(){
 			
 		}
-		public Record(int identifier, Timestamp ts, Operation uoperation, Timestamp uprev){
+		public Record(int identifier, Timestamp ts, Operation uoperation, Timestamp uprev, String sequence){
 			this.identifier = identifier;
 			this.ts = ts;
 			this.uoperation = uoperation;
 			this.uprev = uprev;
+			this.sequence = sequence;
 		}
 		int identifier;
 		Timestamp ts;
 		Operation uoperation;
 		Timestamp uprev;
-		Id uid;
+		String sequence;
 		@Override
 		public int compareTo(Object o) {
 			Timestamp other = ((Record)o).uprev;
@@ -487,7 +493,7 @@ class Log{
 		@Override
 		public String toString(){
 			String s = "";
-			s += ("id:,"+identifier+",:ts:,"+ts+",:uoperation:,"+uoperation+",:uprev:,"+uprev);
+			s += ("id:,"+identifier+",:ts:,"+ts+",:uoperation:,"+uoperation+",:uprev:,"+uprev+",:sequence:,"+sequence);
 			return s;
 		}
 	}
@@ -530,6 +536,8 @@ class Log{
 				case "uprev":
 					record.uprev = Timestamp.deserialize(pair[1]);
 					break;
+				case "sequence":
+					record.sequence = pair[1];
 				}
 			}
 			records.add(record);

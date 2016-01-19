@@ -133,6 +133,8 @@ public class ClientConnection implements Runnable {
 			update.key = receivedMessage.getKey();
 			update.value = receivedMessage.getValue();
 			update.prev = receivedMessage.getPrev();
+			update.sequence = receivedMessage.getSequence();
+			System.out.println("sequence:"+update.sequence);
 			put(update);
 		}
 			break;

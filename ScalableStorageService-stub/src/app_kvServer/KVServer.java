@@ -441,7 +441,7 @@ public class KVServer{
 				
 		if(receivedData.getStatusType() == StatusType.DATA){
 			String datamsg = receivedData.getData();
-
+			
 			if(datamsg.contains(":")){
 				String [] pairs = datamsg.split(":");
 	
@@ -453,8 +453,7 @@ public class KVServer{
 				}
 			   	logger.info(pairs.length + " key value pairs are received");
 			}else{
-			   	logger.info("0 key value pairs are received");
-				
+			   	logger.info("0 key value pairs are received");				
 			}
 		}else{
 			logger.error("Format of received data is not correct");

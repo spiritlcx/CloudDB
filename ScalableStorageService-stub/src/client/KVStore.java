@@ -32,7 +32,7 @@ public class KVStore implements KVCommInterface {
 	private Metadata metadata;
 
 	private HashMap<Server, Timestamp> prevs = new HashMap<Server, Timestamp>();
-	private Timestamp prev;
+	private HashMap<Server, Integer> sequences = new HashMap<Server, Integer>();
 	
  	private String address;
  	private int port;
@@ -159,7 +159,14 @@ public class KVStore implements KVCommInterface {
 			prevs.put(coordinator, new Timestamp(3));
 		}
 		
+		if(sequences.get(coordinator) == null){
+			sequences.put(coordinator, 0);
+		}
+		
 		sentMessage.setPrev(prevs.get(coordinator));
+		sentMessage.setSequence(coordinator.ip+coordinator.port+sequences.get(coordinator));
+		sequences.put(coordinator, sequences.get(coordinator)+1);
+
 		
 		if(!isCoordinator(address, ""+port, key) && !isReplica(address, ""+port, key) && !isSecondReplica(address, ""+port, key)){
 			disconnect();
@@ -240,7 +247,6 @@ public class KVStore implements KVCommInterface {
 				msg = messageHandler.receiveMessage();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
-				e.printStackTrace();
 				return;
 			}
 			

@@ -67,21 +67,21 @@ public class KVAdminMessage extends Message{
 		case RECEIVE:
 		case PREPARED:
 		case MOVEFINISH:
-			return new KVAdminMessage("{StatusType: " + type +"}");
+			return new KVAdminMessage("{StatusType:: " + type +"}");
 		case RECEIVED:
-			return new KVAdminMessage("{StatusType: " + type + ", port: " + port + "}");
+			return new KVAdminMessage("{StatusType:: " + type + ", port:: " + port + "}");
 		case INIT:
-			return new KVAdminMessage("{StatusType: " + type +", cacheSize: " + cacheSize + ", displacementStrategy: " +
-		displacementStrategy + ", metadata: " + metadata + "}");
+			return new KVAdminMessage("{StatusType:: " + type +", cacheSize:: " + cacheSize + ", displacementStrategy:: " +
+		displacementStrategy + ", metadata:: " + metadata + "}");
 
 		case DATA:
-			return new KVAdminMessage("{StatusType: " + type + ", data: " + data + "}");
+			return new KVAdminMessage("{StatusType:: " + type + ", data:: " + data + "}");
 		case MOVE:
-			return new KVAdminMessage("{StatusType: " + type + ", from: " + from + ", to: " + to + ", ip: " + ip + ", port: " + port + "}");
+			return new KVAdminMessage("{StatusType:: " + type + ", from:: " + from + ", to:: " + to + ", ip:: " + ip + ", port:: " + port + "}");
 		case REMOVE:
-			return new KVAdminMessage("{StatusType: " + type + ", from: " + from + ", to: " + to + "}");			
+			return new KVAdminMessage("{StatusType:: " + type + ", from:: " + from + ", to:: " + to + "}");
 		case UPDATE:
-			return new KVAdminMessage("{StatusType: " + type + ", metadata: " + metadata + "}");
+			return new KVAdminMessage("{StatusType:: " + type + ", metadata:: " + metadata + "}");
 			
 		default:
 			return null;
@@ -101,7 +101,7 @@ public class KVAdminMessage extends Message{
 
 		for(String pair : pairs){
 			
-			String [] keyvalue= pair.split(":");
+			String [] keyvalue= pair.split("::");
 			
 			if(keyvalue[0].trim().equals("StatusType")){
 				demessage.setStatusType((StatusType.valueOf(keyvalue[1].trim().toUpperCase())));
