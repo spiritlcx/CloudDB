@@ -3,6 +3,7 @@ package common.messages;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 
+import common.assist.Timestamp;
 import ecs.Server;
 import metadata.Metadata;
 
@@ -17,8 +18,17 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 	private byte[] msgBytes;
 	private String key;
 	private String value;
+	private Timestamp prev;
 	private StatusType statusType;
 	private Metadata metadata;
+	public Timestamp getPrev() {
+		return prev;
+	}
+
+	public void setPrev(Timestamp prev) {
+		this.prev = prev;
+	}
+
 	/**
 	 * Constructs a TextMessage with no initial values
 	 */
@@ -112,30 +122,34 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 
 		switch(statusType){
 		case GET:
-			return new TextMessage("{StatusType: GET, key:" + key +"}");
+			return new TextMessage("{StatusType: GET, key:" + key + ", prev:" + prev+"}");
 		case GET_ERROR:
-			return new TextMessage("{StatusType: GET_ERROR, key:" + key +"}");
+			return new TextMessage("{StatusType: GET_ERROR, key:" + key +",prev:"+prev +"}");
 		case GET_SUCCESS:
-			return new TextMessage("{StatusType: GET_SUCCESS, key:" + key + ", value:" + value +"}");
+			return new TextMessage("{StatusType: GET_SUCCESS, key:" + key + ", value:" + value + ",prev:"+prev +"}");
 		case PUT:
-			return new TextMessage("{StatusType: PUT, key:" + key + ", value:" + value +"}");
+			return new TextMessage("{StatusType: PUT, key:" + key + ", value:" + value +",prev:"+prev +"}");
 		case PUT_SUCCESS:
-			return new TextMessage("{StatusType: PUT_SUCCESS, key:" + key + ", value:" + value +"}");
+			return new TextMessage("{StatusType: PUT_SUCCESS, key:" + key + ", value:" + value +", prev:"+prev +"}");
 		case PUT_UPDATE:
-			return new TextMessage("{StatusType: PUT_UPDATE, key:" + key + ", value:" + value +"}");
+			return new TextMessage("{StatusType: PUT_UPDATE, key:" + key + ", value:" + value +", prev:"+prev +"}");
+		case BLOCKED:
+			return new TextMessage("{StatusType: BLOCKED, key:" + key + ", value:" + value +", prev:"+prev +"}");			
 		case PUT_ERROR:
-			return new TextMessage("{StatusType: PUT_ERROR, key:" + key + ", value:" + value +"}");
+			return new TextMessage("{StatusType: PUT_ERROR, key:" + key + ", value:" + value +", prev:"+prev +"}");
 		case DELETE_SUCCESS:
-			return new TextMessage("{StatusType: DELETE_SUCCESS, key:" + key +"}");
+			return new TextMessage("{StatusType: DELETE_SUCCESS, key:" + key +", prev:"+prev +"}");
 		case DELETE_ERROR:
-			return new TextMessage("{StatusType: DELETE_ERROR, key:" + key +"}");
+			return new TextMessage("{StatusType: DELETE_ERROR, key:" + key +", prev:"+prev +"}");
 		case SERVER_STOPPED:
 			return new TextMessage("{StatusType: SERVER_STOPPED, key:" + key + "}");
 		case SERVER_WRITE_LOCK:
 			return new TextMessage("{StatusType: SERVER_WRITE_LOCK, key:" + key +"}");
 	    case SERVER_NOT_RESPONSIBLE:
-			return new TextMessage("{StatusType: SERVER_NOT_RESPONSIBLE, key:" + key + ", metadata:" + metadata.toString() +"}");
-		default:
+			return new TextMessage("{StatusType: SERVER_NOT_RESPONSIBLE, key:" + key +", value" + value + ", metadata:" + metadata.toString() +"}");
+	    case WELCOME:
+	    	return new TextMessage("{StatusType: WELCOME, key:" + key +", metadata:" + metadata.toString() +"}");
+	    default:
 			return new TextMessage("{StatusType: FAILED}");
 		}
 	}
@@ -154,7 +168,7 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 			return null;
 		}
 		msg = msg.substring(1, msg.length()-1);
-		String [] pairs = msg.split(",", 3);
+		String [] pairs = msg.split(",");
 		for(String pair : pairs){
 			
 			String [] keyvalue= pair.split(":");
@@ -172,8 +186,9 @@ public class TextMessage extends Message implements Serializable, KVMessage {
 				else{
 					demessage.setValue("");
 				}
-			}
-			else if(keyvalue[0].trim().equals("metadata")){
+			}else if(keyvalue[0].trim().equals("prev")){
+				demessage.setPrev(Timestamp.deserialize(keyvalue[1].trim()));
+			}else if(keyvalue[0].trim().equals("metadata")){
 				Metadata tempdata = new Metadata();
 				
 				if(keyvalue.length > 1){

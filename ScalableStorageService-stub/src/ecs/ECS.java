@@ -390,7 +390,7 @@ public class ECS {
 		
 					int currentNode = 0;
 					
-					startServers();
+//					startServers();
 					
 					while(currentNode != numberOfNodes && (kvserver = ecsServer.accept()) != null){
 						logger.info(kvserver.getInetAddress() + " " + kvserver.getPort() + " is connected");

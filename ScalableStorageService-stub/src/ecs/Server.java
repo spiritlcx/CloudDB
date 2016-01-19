@@ -23,6 +23,21 @@ public class Server implements Comparator<Server>{
 	}
 	
 	@Override
+	public int hashCode(){
+		return ip.hashCode() + port.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o){
+		Server o1 = this;
+		Server o2 = (Server)o;
+		
+		if(o1.ip.equals(o2.ip) && o1.port.equals(o2.port))
+			return true;
+		return false;
+	}
+	
+	@Override
 	public int compare(Server o1, Server o2) {
 		// TODO Auto-generated method stub
 		if(o1.ip.equals(o2.ip) && o1.port.equals(o2.port))

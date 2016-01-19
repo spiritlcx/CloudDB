@@ -140,6 +140,8 @@ public class KVClient implements ClientSocketListener{
 	 */
 	private void connect(String address, int port) {
 		client = new KVStore(address, port);
+		client.addListener(this);
+
 		try {
 			client.connect();
 		} catch (Exception e) {
@@ -147,7 +149,6 @@ public class KVClient implements ClientSocketListener{
 			e.printStackTrace();
 			return;
 		}
-		client.addListener(this);
 	}
 	/**
 	 * Calls the disconnect method of KVStore

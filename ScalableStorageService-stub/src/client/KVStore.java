@@ -2,24 +2,22 @@ package client;
 
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 
 import common.messages.TextMessage;
 import client.ClientSocketListener.SocketStatus;
+import common.assist.Timestamp;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
 import ecs.Server;
-import logger.LogSetup;
 import common.messages.MessageHandler;
 import metadata.Metadata;
 
@@ -28,11 +26,14 @@ public class KVStore implements KVCommInterface {
 	private Set<ClientSocketListener> listeners;
 	private MessageHandler messageHandler;
 	
-	private boolean running;
+	private volatile boolean running;
 	
 	private Socket clientSocket; 	
 	private Metadata metadata;
- 	
+
+	private HashMap<Server, Timestamp> prevs = new HashMap<Server, Timestamp>();
+	private Timestamp prev;
+	
  	private String address;
  	private int port;
 	
@@ -46,7 +47,7 @@ public class KVStore implements KVCommInterface {
 	public KVStore(String address, int port){
 		this.address = address;
 		this.port = port;
-		
+
 		listeners = new HashSet<ClientSocketListener>();
 		setRunning(true);
 
@@ -54,13 +55,22 @@ public class KVStore implements KVCommInterface {
 	
 	public void run() {
 		try {
-			setRunning(true);
 			byte [] msg = messageHandler.receiveMessage();
+
 			TextMessage receivedMessage = new TextMessage(msg);
+			receivedMessage = receivedMessage.deserialize();
+			metadata = receivedMessage.getMetadata();
+
 			for(ClientSocketListener listener : listeners) {
 				listener.handleNewMessage(receivedMessage);
 			}
-			
+			setRunning(true);
+			new Thread(){
+				public void run(){
+					receive();
+				}
+			}.start();
+
 		} catch (IOException e) {
 			logger.warn("Error while receiving messages.", e);
 		}
@@ -142,48 +152,26 @@ public class KVStore implements KVCommInterface {
 		sentMessage.setStatusType(StatusType.PUT);
 		sentMessage.setKey(key);
 		sentMessage.setValue(value);
+	
+		Server coordinator = metadata.getServerForKey(key);
+
+		if(prevs.get(coordinator) == null){
+			prevs.put(coordinator, new Timestamp(3));
+		}
 		
-		if(metadata != null)
-		{
-			Server correctServer = metadata.getServerForKey(key);
-			
-			if(correctServer != null && (!correctServer.ip.equals(this.address) || !correctServer.port.equals(this.port+"")))
-			{
-				disconnect();
-				this.address = correctServer.ip;
-				this.port = Integer.parseInt(correctServer.port);
-				connect();
-			}
+		sentMessage.setPrev(prevs.get(coordinator));
+		
+		if(!isCoordinator(address, ""+port, key) && !isReplica(address, ""+port, key) && !isSecondReplica(address, ""+port, key)){
+			disconnect();
+			this.address = coordinator.ip;
+			this.port = Integer.parseInt(coordinator.port);
+			connect();								
 		}
 
 		messageHandler.sendMessage(sentMessage.serialize().getMsg());
 
-		byte [] msg = messageHandler.receiveMessage();
-		
-		TextMessage receivedMessage = new TextMessage(msg);
-		receivedMessage = receivedMessage.deserialize();
-				
-		if(receivedMessage.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)){
-			
-			if(receivedMessage.getMetadata() != null){
-				this.metadata = receivedMessage.getMetadata();
-				logger.warn("Metadata stale! Metadata was updated!");
-				reestablishConnection(key);
-				return put(key, value);
-			}
-			else{
-				logger.error("Metadata stale, but no metadata update was received!");
-				return new TextMessage("Error while contacting the server.");
-			}
-		}
-		else{
-			for(ClientSocketListener listener : listeners) {
-				listener.handleNewMessage(receivedMessage);
-			}
+		return null;
 
-			return (KVMessage)receivedMessage.deserialize();
-		}
-	
 	}
 
 	/**
@@ -197,51 +185,32 @@ public class KVStore implements KVCommInterface {
 		TextMessage sentMessage = new TextMessage();
 		sentMessage.setStatusType(StatusType.GET);
 		sentMessage.setKey(key);
-		
-		if(metadata != null){
-			Server correctServer = metadata.getServerForKey(key);
-			Server successor = metadata.getSuccessor(correctServer.hashedkey);
-			Server sesuccessor = null;
-			if(successor != null){
-				sesuccessor = metadata.getSuccessor(successor.hashedkey);
-			}
 
-			if((!correctServer.ip.equals(this.address) || !correctServer.port.equals("" + this.port)) && (!sesuccessor.ip.equals(this.address) || !sesuccessor.port.equals("" + this.port)) && (!successor.ip.equals(this.address) || !successor.port.equals("" + this.port))){
-				disconnect();
-				this.address = correctServer.ip;
-				this.port = Integer.parseInt(correctServer.port);
-				connect();
-			}
+		Server coordinator = metadata.getServerForKey(key);
+		if(prevs.get(coordinator) == null){
+			prevs.put(coordinator, new Timestamp(3));
 		}
+		
+		sentMessage.setPrev(prevs.get(coordinator));
+		
+		Server correctServer = metadata.getServerForKey(key);
+		Server successor = metadata.getSuccessor(correctServer.hashedkey);
+		Server sesuccessor = null;
+		if(successor != null){
+			sesuccessor = metadata.getSuccessor(successor.hashedkey);
+		}
+
+		if((!correctServer.ip.equals(this.address) || !correctServer.port.equals("" + this.port)) && (!sesuccessor.ip.equals(this.address) || !sesuccessor.port.equals("" + this.port)) && (!successor.ip.equals(this.address) || !successor.port.equals("" + this.port))){
+			disconnect();
+			this.address = correctServer.ip;
+			this.port = Integer.parseInt(correctServer.port);
+			connect();
+		}
+
 		
 		messageHandler.sendMessage(sentMessage.serialize().getMsg());
-		
-		byte [] msg = messageHandler.receiveMessage();
-		
-		TextMessage receivedMessage = new TextMessage(msg);
-		receivedMessage = receivedMessage.deserialize();
 
-		
-		if(receivedMessage.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)){
-			
-			if(receivedMessage.getMetadata() != null){
-				this.metadata = receivedMessage.getMetadata();
-				logger.warn("Metadata stale! Metadata was updated!");
-				reestablishConnection(key);
-				return get(key);
-			}
-			else{
-				logger.error("Metadata stale, but no metadata update was received!");
-				return new TextMessage("Error while contacting the server.");
-			}
-		}
-		else{
-			for(ClientSocketListener listener : listeners) {
-				listener.handleNewMessage(receivedMessage);
-			}
-
-			return (KVMessage)receivedMessage.deserialize();
-		}
+		return null;
 	}
 	
 	/**
@@ -263,4 +232,77 @@ public class KVStore implements KVCommInterface {
 		}
 	}
 	
+	private void receive(){		
+		while(running){
+			
+			byte[] msg;
+			try {
+				msg = messageHandler.receiveMessage();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return;
+			}
+			
+			TextMessage receivedMessage = new TextMessage(msg);
+			receivedMessage = receivedMessage.deserialize();
+			
+			if(receivedMessage.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)){
+				
+				if(receivedMessage.getMetadata() != null){
+					this.metadata = receivedMessage.getMetadata();
+					logger.warn("Metadata stale! Metadata was updated!");
+					String key = receivedMessage.getKey();
+					String value = receivedMessage.getValue();
+					try {
+						reestablishConnection(key);
+						if(value.equals("nullll")){
+							get(key);
+						}else{
+							put(key, value);
+						}
+
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				else{
+					logger.error("Metadata stale, but no metadata update was received!");
+				}
+			}
+			else{
+				if(receivedMessage.getStatus() != StatusType.SERVER_STOPPED && receivedMessage.getStatus() != StatusType.SERVER_WRITE_LOCK){
+					Server coordinator = metadata.getServerForKey(receivedMessage.getKey());
+					prevs.get(coordinator).merge(receivedMessage.getPrev());
+				}
+				
+				for(ClientSocketListener listener : listeners) {
+					listener.handleNewMessage(receivedMessage);
+				}
+			}
+		}
+	}
+
+	private boolean isCoordinator(String ip, String port, String key){
+		Server server = metadata.getServerForKey(key);
+		return (server.ip).equals(ip) && server.port.equals(port);
+	}
+	
+	private boolean isReplica(String ip, String port, String key){
+		Server server = metadata.getServerForKey(key);
+		Server successor = metadata.getSuccessor(server.hashedkey);
+
+		return successor!= null &&  (successor.ip.equals(ip) && successor.port.equals(port));
+	}
+	
+	private boolean isSecondReplica(String ip, String port, String key){
+		Server server = metadata.getServerForKey(key);
+		Server successor = metadata.getSuccessor(server.hashedkey);
+		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
+
+		return successor!= null && (sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port));
+		
+	}
+
 }

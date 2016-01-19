@@ -1,8 +1,6 @@
 package app_kvServer;
 
-import java.io.InputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.net.ServerSocket;
 
@@ -12,6 +10,7 @@ import store.StorageManager;
 import org.apache.log4j.*;
 
 import app_kvServer.ServerState.State;
+import common.assist.Operation;
 import common.messages.KVMessage.StatusType;
 import common.messages.MessageHandler;
 import common.messages.TextMessage;
@@ -36,10 +35,10 @@ public class ClientConnection implements Runnable {
 	private Metadata metadata;
 
 	private MessageHandler messageHandler;
-	private StorageManager storageManager;
 	
     private ReplicationManager replicationManager;
-	
+	private ReplicaManager [] replicaManagers = new ReplicaManager[3];
+    
 	/**
 	 * 
 	 * Constructs a new CientConnection object for a given TCP socket.
@@ -50,14 +49,15 @@ public class ClientConnection implements Runnable {
 	 * @param persistance Instance of Persictance class, which handles the reading and writing to the storage file.
 	 * @param metadata Metadata set of the server.
 	 */
-	public ClientConnection(Socket clientSocket, ServerSocket serverSocket, Metadata metadata) {
+	public ClientConnection(int port, Socket clientSocket, ServerSocket serverSocket, Metadata metadata, ReplicaManager [] replicaManager) {
 		this.clientSocket = clientSocket;
 		this.serverSocket = serverSocket;
 		this.isOpen = true;
 		this.metadata = metadata;
+		this.replicaManagers = replicaManager;
 		
-		storageManager = StorageManager.getInstance();
 		replicationManager= ReplicationManager.getInstance();
+	
 	}
 	
 	/**
@@ -68,11 +68,13 @@ public class ClientConnection implements Runnable {
 		try {		
 			messageHandler = new MessageHandler(clientSocket, logger);
 			
-			TextMessage welcomemsg = new TextMessage("Connection to MSRG Echo server established: " 
+			TextMessage welcomemsg = new TextMessage();
+			welcomemsg.setStatusType(StatusType.WELCOME);
+			welcomemsg.setKey("Connection to MSRG Echo server established: " 
 					+ clientSocket.getLocalAddress() + " / "
 					+ clientSocket.getLocalPort());
-			
-			messageHandler.sendMessage(welcomemsg.getMsg());
+			welcomemsg.setMetadata(metadata);
+			messageHandler.sendMessage(welcomemsg.serialize().getMsg());
 			
 			while(isOpen) {
 				try {
@@ -85,7 +87,7 @@ public class ClientConnection implements Runnable {
 						try{
 							action(receivedMessage);
 						}catch(Exception e){
-							logger.error(e.getMessage());
+							logger.error("Action is not performed correctly");
 						}
 					}
 					
@@ -126,11 +128,20 @@ public class ClientConnection implements Runnable {
 	 */
 	private void action(TextMessage receivedMessage){
 		switch(receivedMessage.getStatus()){
-		case PUT:
-			put(receivedMessage.getKey(), receivedMessage.getValue());
+		case PUT:{
+			Operation update = new Operation();
+			update.key = receivedMessage.getKey();
+			update.value = receivedMessage.getValue();
+			update.prev = receivedMessage.getPrev();
+			put(update);
+		}
 			break;
-		case GET:
-			get(receivedMessage.getKey());
+		case GET:{
+			Operation query = new Operation();
+			query.key = receivedMessage.getKey();
+			query.prev = receivedMessage.getPrev();
+			get(query);
+		}
 			break;
 		default:
 			logger.error("No valid status.");
@@ -138,63 +149,86 @@ public class ClientConnection implements Runnable {
 		}
 	}
 	
-	private void put(String key, String value){
+	private void put(Operation update){
 		TextMessage sentMessage = new TextMessage();
 
 		if(KVServer.state.getState() == State.STOP){
 			sentMessage.setStatusType(StatusType.SERVER_STOPPED);
+			try {
+				messageHandler.sendMessage(sentMessage.serialize().getMsg());
+			} 
+			catch (IOException e) {
+				logger.error("Unable to send response!", e);
+			}
+
 		}else if(KVServer.state.getState() == State.LOCK){
-			sentMessage.setStatusType(StatusType.SERVER_WRITE_LOCK);			
+			sentMessage.setStatusType(StatusType.SERVER_WRITE_LOCK);
+			try {
+				messageHandler.sendMessage(sentMessage.serialize().getMsg());
+			} 
+			catch (IOException e) {
+				logger.error("Unable to send response!", e);
+			}
+
 		}else{
-	
-			if(isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), key)){
-				StatusType type = storageManager.put(key, value);
-				sentMessage.setStatusType(type);
-				replicationManager.replicate(type, key, value);
+			OperationHandler operationHandler = new OperationHandler();
+			operationHandler.operation = update;
+			operationHandler.messageHandler = messageHandler;
+			
+			if(isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
+				replicaManagers[0].receiveUpdate(operationHandler);
+			}else if(isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
+				replicaManagers[1].receiveUpdate(operationHandler);
+			}else if(isSecondReplica("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
+				replicaManagers[2].receiveUpdate(operationHandler);
 			}else{
 				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
 				sentMessage.setMetadata(metadata);
+				sentMessage.setKey(update.key);
+				sentMessage.setValue(update.value);
+				try {
+					messageHandler.sendMessage(sentMessage.serialize().getMsg());
+				} 
+				catch (IOException e) {
+					logger.error("Unable to send response!", e);
+				}
 			}
-			sentMessage.setKey(key);
-			sentMessage.setValue(value);
-		}
-		
-		try {
-			messageHandler.sendMessage(sentMessage.serialize().getMsg());
-		} 
-		catch (IOException e) {
-			logger.error("Unable to send response!", e);
 		}
 	}
-	private void get(String key){
+	private void get(Operation query){
 		TextMessage sentMessage = new TextMessage();
-		String value = null;
 
 		if(KVServer.state.getState() == State.STOP){
 			sentMessage.setStatusType(StatusType.SERVER_STOPPED);
+			try {
+				messageHandler.sendMessage(sentMessage.serialize().getMsg());
+			} catch (IOException e) {
+				logger.error("Unable to send response!", e);
+			}
+
 		}else{
-			
-			if(isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), key) ||
-					isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), key)){
-				value = storageManager.get(key);
-				if(value == null){
-					sentMessage.setStatusType(StatusType.GET_ERROR);
-				}else{
-					sentMessage.setStatusType(StatusType.GET_SUCCESS);					
-				}
+			OperationHandler operationHandler = new OperationHandler();
+			operationHandler.operation = query;
+			operationHandler.messageHandler = messageHandler;
+			if(isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), query.key)){
+				replicaManagers[0].query(operationHandler);
+			}else if(isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), query.key)){
+				replicaManagers[1].query(operationHandler);
+			}else if(isSecondReplica("127.0.0.1", ""+serverSocket.getLocalPort(), query.key)){
+				replicaManagers[2].query(operationHandler);				
 			}else{
 				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
-				sentMessage.setMetadata(metadata);				
+				sentMessage.setMetadata(metadata);
+				sentMessage.setKey(query.key);
+				sentMessage.setValue("nullll");
+
+				try {
+					messageHandler.sendMessage(sentMessage.serialize().getMsg());
+				} catch (IOException e) {
+					logger.error("Unable to send response!", e);
+				}
+
 			}
-		}
-
-		sentMessage.setKey(key);
-		sentMessage.setValue(value);
-
-		try {
-			messageHandler.sendMessage(sentMessage.serialize().getMsg());
-		} catch (IOException e) {
-			logger.error("Unable to send response!", e);
 		}
 	}
 	
@@ -206,8 +240,16 @@ public class ClientConnection implements Runnable {
 	private boolean isReplica(String ip, String port, String key){
 		Server server = metadata.getServerForKey(key);
 		Server successor = metadata.getSuccessor(server.hashedkey);
+
+		return successor!= null &&  (successor.ip.equals(ip) && successor.port.equals(port));
+	}
+	
+	private boolean isSecondReplica(String ip, String port, String key){
+		Server server = metadata.getServerForKey(key);
+		Server successor = metadata.getSuccessor(server.hashedkey);
 		Server sesuccessor = metadata.getSuccessor(successor.hashedkey);
 
-		return successor!= null && ((sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port)) || (successor.ip.equals(ip) && successor.port.equals(port)));
+		return successor!= null && (sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port));
+		
 	}
 }

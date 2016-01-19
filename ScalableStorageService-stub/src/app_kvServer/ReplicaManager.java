@@ -1,20 +1,193 @@
 package app_kvServer;
 
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.TreeSet;
 
+import org.apache.log4j.Logger;
+
+import common.assist.Operation;
+import common.assist.Timestamp;
+import common.messages.MessageHandler;
+import common.messages.TextMessage;
+import common.messages.KVMessage.StatusType;
+import ecs.Server;
 import store.StorageManager;
 
-public class ReplicaManager {
-//	private StorageManager storageManager;
+class OperationHandler{
+	Operation operation;
+	MessageHandler messageHandler;
+}
+
+public class ReplicaManager extends Thread{
+	private StorageManager storageManager;
 	private Timestamp valueTimestamp;
 	private Timestamp replicaTimestamp;
 	private Timestamp [] tableTimestamp;
 	private int identifier;
 	private Log log;
+	private Block block0 = new Block();
+	private Block block1 = new Block();
+
+	private int port;
+	private Logger logger;
+	private MessageHandler [] messageReceiver;
+	private MessageHandler [] messageSender;
+	private ArrayList<OperationHandler> updateQueue = new ArrayList<OperationHandler>();
+	private ArrayList<OperationHandler> queryQueue = new ArrayList<OperationHandler>();
 	
-	public ReplicaManager(int identifier, int size){
+	private ServerSocket server;
+	public void run(){
+
+		//build server
+		new Thread(){
+			public void run(){
+				try {
+					server = new ServerSocket(port-100-identifier*10);
+					Socket client = null;
+					while((client = server.accept()) != null){
+						if(messageReceiver[0] == null){
+							messageReceiver[0] = new MessageHandler(client, logger);
+							synchronized(block0){
+								block0.notifyAll();
+							}
+						}else{
+							messageReceiver[1] = new MessageHandler(client, logger);
+							synchronized(block1){
+								block1.notifyAll();
+							}
+						}
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}.start();
+
+		//receive gossip message from other replica managers
+		new Thread(){
+			public void run(){
+				try {
+					while(!server.isClosed()){
+						while(messageReceiver[0] == null){
+							try {
+								synchronized(block0){
+									block0.wait();
+								}
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
+						
+						String content = new String(messageReceiver[0].receiveMessage());
+						GossipMessage gossipMessage = GossipMessage.deserialize(content);
+						receiveGossip(gossipMessage);
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					messageReceiver[0] = null;
+				}
+			}
+		}.start();
+		
+		new Thread(){
+			public void run(){
+				try {
+					while(!server.isClosed()){
+						while(messageReceiver[1] == null){
+							try {
+								synchronized(block1){
+									block1.wait();
+								}
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
+
+						String content = new String(messageReceiver[1].receiveMessage());
+						GossipMessage gossipMessage = GossipMessage.deserialize(content);
+						receiveGossip(gossipMessage);
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					messageReceiver[1] = null;
+				}
+			}
+		}.start();
+	}
+
+	//connect to server on other replica managers
+	public void connect(Server server1, Server server2){
+		
+		new Thread(){
+			public void run(){
+				try {
+					int port1= 0;
+					int port2 = 0;
+					if(identifier == 0){
+						port1 = 1;
+						port2 = 2;
+					}else if(identifier == 1){
+						port1 = 0;
+						port2 = 2;
+					}else{
+						port1 = 0;
+						port2 = 1;
+					}
+					Socket client1 = new Socket(server1.ip, Integer.parseInt(server1.port)-100-port1*10);
+					Socket client2 = new Socket(server2.ip, Integer.parseInt(server2.port)-100-port2*10);
+					
+					messageSender[0] = new MessageHandler(client1, logger);
+					messageSender[1] = new MessageHandler(client2, logger);
+					
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}.start();
+
+
+	}
+	
+	public void close(){
+		try {
+			server.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+//	public ReplicaManager(int identifier, int size){
+//		tableTimestamp = new Timestamp[size];
+//		this.identifier = identifier;
+//		valueTimestamp = new Timestamp(size);
+//		replicaTimestamp = new Timestamp(size);
+//
+//		for(int i = 0; i < size; i++){
+//			tableTimestamp[i] = new Timestamp(size);
+//		}
+//		block = new Block();
+//		log = new Log();
+//
+//	}
+	
+	public ReplicaManager(int port, StorageManager storageManager, int identifier, int size, Logger logger){
 		this.identifier = identifier;
+		this.storageManager = storageManager;
+		this.port = port;
+		this.logger = logger;
+		
+		messageReceiver = new  MessageHandler[2];
+		messageSender = new MessageHandler[2];
+		
 		valueTimestamp = new Timestamp(size);
 		replicaTimestamp = new Timestamp(size);
 		tableTimestamp = new Timestamp[size];
@@ -22,38 +195,100 @@ public class ReplicaManager {
 			tableTimestamp[i] = new Timestamp(size);
 		}
 		log = new Log();
-
 	}
 	
 	public GossipMessage getGossip(){
 		GossipMessage message = new GossipMessage();
 		message.identifier = identifier;
 		message.replicaLog = log;
-		message.replicaTimestmap = replicaTimestamp;
+		message.replicaTimestamp = replicaTimestamp;
 		return message;
 	}
 	
-	public void query(Operation operation){
+	public void query(OperationHandler operationHandler){
+		Operation operation = operationHandler.operation;
+
 		if(operation.prev.compare(valueTimestamp) < 0){
-//			String value = storageManager.get(operation.key);
+			doquery(operationHandler);
+		}else{
+			queryQueue.add(operationHandler);
 		}
+
 	}
 
-	public Timestamp receiveUpdate(Operation operation){
+	private void doquery(OperationHandler operationHandler){
+		Operation operation = operationHandler.operation;
+		TextMessage sentMessage = new TextMessage();
+		MessageHandler messageHandler = operationHandler.messageHandler;
+		String value = storageManager.get(operation.key);
+
+		if(value == null){
+			sentMessage.setStatusType(StatusType.GET_ERROR);
+		}else{
+			sentMessage.setStatusType(StatusType.GET_SUCCESS);
+			sentMessage.setValue(value);
+
+		}
+		sentMessage.setKey(operation.key);
+		sentMessage.setPrev(valueTimestamp);
+		try {
+			messageHandler.sendMessage(sentMessage.serialize().getMsg());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+	
+	public Timestamp receiveUpdate(OperationHandler operationHandler){
 		//update timestamp by plus 1 in this replicaManager position in the vector
+		Operation operation = operationHandler.operation;
+		MessageHandler messageHandler = operationHandler.messageHandler;
+		
 		Timestamp ts = new Timestamp(operation.prev);
-		ts.update(identifier);
-		replicaTimestamp.update(ts, identifier);
+		replicaTimestamp.update(identifier);
+		ts.update(replicaTimestamp, identifier);
 		
 		Log.Record record = log.new Record(identifier, ts, operation, operation.prev);
 		log.add(record);
-		update();
+
+		TextMessage sentMessage = new TextMessage();
+		if(record.uprev.compare(valueTimestamp) < 0){
+			StatusType type = storageManager.put(operation.key, operation.value);
+			valueTimestamp.merge(record.ts);
+			
+			sentMessage.setStatusType(type);
+		}else{
+			sentMessage.setStatusType(StatusType.BLOCKED);
+			updateQueue.add(operationHandler);
+		}
+		sentMessage.setKey(operation.key);
+		sentMessage.setValue(operation.value);
+		sentMessage.setPrev(valueTimestamp);
+
+		try {
+			messageHandler.sendMessage(sentMessage.serialize().getMsg());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		
+		for(MessageHandler sender: messageSender){
+			try {
+				sender.sendMessage(getGossip().serialize());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		return ts;
 	}
 	
 	public void receiveGossip(GossipMessage gossipMessage){
 		
-		tableTimestamp[gossipMessage.identifier] = gossipMessage.replicaTimestmap;
+		tableTimestamp[gossipMessage.identifier] = gossipMessage.replicaTimestamp;
 		
 		Log gossipLog = gossipMessage.replicaLog;
 		TreeSet<Log.Record> gossipRecords = gossipLog.getRecords();
@@ -66,7 +301,7 @@ public class ReplicaManager {
 			}
 		}
 
-		replicaTimestamp.merge(gossipMessage.replicaTimestmap);
+		replicaTimestamp.merge(gossipMessage.replicaTimestamp);
 
 		update();
 		
@@ -80,12 +315,26 @@ public class ReplicaManager {
 			
 			if(record.uprev.compare(valueTimestamp) < 0){
 				Operation operation = record.uoperation;
-				System.out.println(operation.key + " is inserted");
-//				storageManager.put(operation.key, operation.value);
-				valueTimestamp.merge(record.ts);
+				storageManager.put(operation.key, operation.value);
+				valueTimestamp.merge(record.ts);				
 			}else{
 				return;
 			}
+		}
+
+//		Iterator<OperationHandler> itupdate = updateQueue.iterator();
+//		for(OperationHandler operationHandler : updateQueue){
+//			
+//		}
+
+		Iterator<OperationHandler> itquery = queryQueue.iterator();
+		while(itquery.hasNext()){
+			OperationHandler operationHandler = (OperationHandler)itquery.next();
+			Operation operation = operationHandler.operation;
+			if(operation.prev.compare(valueTimestamp) < 0){
+				doquery(operationHandler);
+			}
+			itquery.remove();
 		}
 	}
 	
@@ -104,52 +353,101 @@ public class ReplicaManager {
 		}
 	}
 
-	public static void main(String [] args){
-		ReplicaManager r1 = new ReplicaManager(0, 3);
-		ReplicaManager r2 = new ReplicaManager(1, 3);
-		ReplicaManager r3 = new ReplicaManager(2, 3);
-
-		Operation update = new Operation();
-		update.key = "aa";
-		update.value = "bb";
-		update.prev = new Timestamp(3);
-		Timestamp ts = r1.receiveUpdate(update);
-		
-		Operation update1 = new Operation();
-		update1.key = "bb";
-		update1.value = "bb";
-		update1.prev = ts;
-		
-		ts = r2.receiveUpdate(update1);
-		r2.receiveGossip(r1.getGossip());
-
-		Operation update2 = new Operation();
-		update2.key = "cc";
-		update2.value = "bb";
-		update2.prev = ts;
-
-		r3.receiveUpdate(update2);
+//	public static void main(String [] args){
+//		ReplicaManager r1 = new ReplicaManager(0, 3);
+//		ReplicaManager r2 = new ReplicaManager(1, 3);
+//		ReplicaManager r3 = new ReplicaManager(2, 3);
+//
+//		Operation update = new Operation();
+//		update.key = "aa";
+//		update.value = "bb";
+//		update.prev = new Timestamp(3);
+//		Timestamp ts = r1.receiveUpdate(update);
+//		
+//		Operation update1 = new Operation();
+//		update1.key = "bb";
+//		update1.value = "bb";
+//		update1.prev = ts;
+//		
+//		ts = r2.receiveUpdate(update1);
+//		r2.receiveGossip(r1.getGossip());
+//
+//		Operation update2 = new Operation();
+//		update2.key = "cc";
+//		update2.value = "bb";
+//		update2.prev = ts;
+//
+//		r3.receiveUpdate(update2);
 //		r3.receiveGossip(r2.getGossip());
-		r3.receiveGossip(r1.getGossip());
-		
-	}
+////		r3.receiveGossip(r1.getGossip());		
+////		System.out.println(r2.getGossip().serialize());
+////		System.out.println(r2.getGossip().replicaLog.toString());
+//		System.out.println(GossipMessage.deserialize(r2.getGossip().serialize()));
+////		Log log = Log.deserialize(r2.getGossip().replicaLog.toString());
+////		TreeSet<Log.Record> records = log.getRecords();
+////		Iterator it = records.iterator();
+////		while(it.hasNext()){
+////			System.out.println("ff");
+////			Log.Record record = (Log.Record)it.next();
+////			System.out.println(record.identifier);
+////			System.out.println(record.ts);
+////			System.out.println(record.uoperation);
+////			System.out.println(record.uprev);
+////
+////		}
+//	}
+}
+
+class Block{
+	
 }
 
 class GossipMessage{
 	int identifier;
-	Timestamp replicaTimestmap;
+	Timestamp replicaTimestamp;
 	Log replicaLog;
-}
+	
+	public String serialize(){
+		return toString();
+	}
 
-class Operation{
-	String key;
-	String value;
-	Timestamp prev;
+	@Override
+	public String toString(){
+		String s = "";
+		s += ("id::"+identifier + ",replicaTimestamp::"+replicaTimestamp + ",log::"+replicaLog);
+		s = s + '\r'+'\n';
+		return s;
+	}
+	
+	public static GossipMessage deserialize(String s){
+		GossipMessage gossipMessage = new GossipMessage();
+		System.out.println(s);
+		String [] elements = s.split(",", 3);
+		for(String element : elements){
+			String [] contents = element.split("::");
+			switch(contents[0]){
+			case "id":
+				gossipMessage.identifier = Integer.parseInt(contents[1]);
+				break;
+			case "replicaTimestamp":
+				gossipMessage.replicaTimestamp = Timestamp.deserialize(contents[1]);
+				break;
+			case "log":
+				gossipMessage.replicaLog = Log.deserialize(contents[1]);
+				break;
+			}
+		}
+		return gossipMessage;
+	}
 }
 
 class Log{
 
 	private TreeSet<Record> records = new TreeSet<Record>();
+	
+	public void setRecords(TreeSet<Record> records){
+		this.records = records;
+	}
 	
 	public void add(Record record){
 		records.add(record);
@@ -166,6 +464,9 @@ class Log{
 	}
 	
 	class Record implements Comparable{
+		public Record(){
+			
+		}
 		public Record(int identifier, Timestamp ts, Operation uoperation, Timestamp uprev){
 			this.identifier = identifier;
 			this.ts = ts;
@@ -182,84 +483,60 @@ class Log{
 			Timestamp other = ((Record)o).uprev;
 			return uprev.compare(other);
 		}
-		
-	}
-}
 
-class Timestamp{
-	private int [] vector;
-	public Timestamp(int n){
-		vector = new int[n];
-	}
-	public Timestamp(Timestamp timestamp){
-		vector = new int[timestamp.length()];
-		int [] othervector = timestamp.getVector();
-		for(int i = 0; i < vector.length; i++){
-			vector[i] = othervector[i];
+		@Override
+		public String toString(){
+			String s = "";
+			s += ("id:,"+identifier+",:ts:,"+ts+",:uoperation:,"+uoperation+",:uprev:,"+uprev);
+			return s;
 		}
-	}
-	public void merge(Timestamp timestamp){
-		if(vector.length != timestamp.length())
-			return;
-		int [] othervector = timestamp.getVector();
-		for(int i = 0; i < timestamp.length(); i++){
-			if(vector[i] < othervector[i])
-				vector[i] = othervector[i];
-		}
-	}
-	
-	public void update(int i){
-		if(i >= vector.length)
-			return;
-		vector[i]++;
-	}
-	
-	public void update(Timestamp timestamp, int i){
-		if(vector.length != timestamp.length())
-			return;
-		int [] othervector = timestamp.getVector();
-		vector[i] = othervector[i];
-	}
-	
-	public int compare(Timestamp timestamp){
-		int [] othervector = timestamp.getVector();
-		if(vector.length != othervector.length)
-			return 0;
-		boolean smaller = false;
-		boolean bigger = false;
-		boolean equal = false;
-		for(int i = 0; i < vector.length; i++){
-			if(vector[i] < othervector[i]){
-				smaller = true;
-			}else if(vector[i] > othervector[i]){
-				bigger = true;
-			}else{
-				equal = true;
-			}
-		}
-
-		if((smaller || equal) && !bigger){
-			return -1;
-		}else if(bigger && !smaller){
-			return 1;
-		}else{
-			return 0;
-		}
-	}
-	
-	public int length(){
-		return vector.length;
-	}
-	public int [] getVector(){
-		return vector;
 	}
 	
 	@Override
 	public String toString(){
 		String s = "";
-		for(int v : vector){
-			s += (v + " ");
+		Iterator<Record> it = records.iterator();
+		while(it.hasNext()){
+			Record record = (Record)it.next();
+			s += ("{"+ record + "},,");
 		}
 		return s;
 	}
+
+	public static Log deserialize(String s){
+		TreeSet<Record> records = new TreeSet<Record>();
+//		{id:(0,ts:(1 0 0 ,uoperation:(key:aa,:value:bb,uprev:(0 0 0 },,{id:(1,ts:(1 1 0 ,uoperation:(key:bb,:value:bb,uprev:(1 0 0 },,
+		String [] rstrings = s.split(",,");
+		Log log = new Log();
+
+		for(String rstring : rstrings){
+			rstring = rstring.substring(1, rstring.length()-1);
+			String [] elements = rstring.split(",:");
+			Record record = log.new Record();
+
+			for(String element : elements){
+
+				String [] pair = element.split(":,");
+				switch(pair[0]){
+				case "id":
+					record.identifier = Integer.parseInt(pair[1]);
+					break;
+				case "ts":
+					record.ts = Timestamp.deserialize(pair[1]);
+					break;
+				case "uoperation":
+					record.uoperation = Operation.deserialize(pair[1]);
+					break;
+				case "uprev":
+					record.uprev = Timestamp.deserialize(pair[1]);
+					break;
+				}
+			}
+			records.add(record);
+		}
+	
+		log.setRecords(records);
+		return log;
+	}
 }
+

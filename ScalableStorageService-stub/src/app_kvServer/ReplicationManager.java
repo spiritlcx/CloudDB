@@ -106,13 +106,10 @@ public class ReplicationManager {
      */
     private void updateSuccessors(){
     	Server successor = metadata.getSuccessor(ConsistentHashing.getHashedKey(name));
-    	System.out.println(ConsistentHashing.getHashedKey(name));
-    	System.out.println(metadata);
     	if(successor != null){
     		try {
 				Socket successorSocket= new Socket(successor.ip, Integer.parseInt(successor.port)+20);
 				successors[0] = new MessageHandler(successorSocket, logger);
-				System.out.println(successor.port);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 
@@ -122,7 +119,6 @@ public class ReplicationManager {
     			try{
     				Socket sesuccessorSocket= new Socket(sesuccessor.ip, Integer.parseInt(sesuccessor.port)+20);
     				successors[1] = new MessageHandler(sesuccessorSocket, logger);
-    				System.out.println(sesuccessor.port);
 
     			}catch(Exception e){
 

@@ -15,6 +15,7 @@ import app_kvServer.ServerState.State;
 import common.messages.KVAdminMessage;
 import common.messages.KVAdminMessage.StatusType;
 import common.messages.MessageHandler;
+import ecs.ConsistentHashing;
 import ecs.Server;
 import logger.LogSetup;
 import metadata.Metadata;
@@ -66,6 +67,8 @@ public class KVServer{
 	private StorageManager storageManager;
 	private ReplicationManager replicationManager;
 	private FailureDetector failureDetector;
+	
+	private ReplicaManager [] replicaManager = new ReplicaManager[3];
 	
     /**
 	 * Start KV Server at given port
@@ -125,7 +128,7 @@ public class KVServer{
 			try {
 				Socket client = serverSocket.accept();
                	ClientConnection connection = 
-                		new ClientConnection(client, serverSocket, metadata);
+                		new ClientConnection(port, client, serverSocket, metadata, replicaManager);
                (new Thread(connection)).start();
                 
                 logger.info("Connected to " 
@@ -238,9 +241,8 @@ public class KVServer{
 			msg.setStatusType(StatusType.RECEIVED);
 			msg.setPort(port);
 			
-			ecsMsgHandler.sendMessage(msg.serialize().getMsg());
-						
-		} catch (Exception e) {
+			ecsMsgHandler.sendMessage(msg.serialize().getMsg());			
+    	} catch (Exception e) {
 			// TODO Auto-generated catch block
 			logger.error(e.getMessage());
 			throw new Exception();
@@ -273,6 +275,15 @@ public class KVServer{
 				
 		storageManager = StorageManager.getInstance(""+port, displacementStrategy, cacheSize);
 		replicationManager = ReplicationManager.getInstance("127.0.0.1"+port, metadata, logger);
+
+		replicaManager[0] = new ReplicaManager(port, storageManager, 0, 3, logger);
+		replicaManager[1] = new ReplicaManager(port, storageManager, 1, 3, logger);
+		replicaManager[2] = new ReplicaManager(port, storageManager, 2, 3, logger);	
+
+		replicaManager[0].start();
+		replicaManager[1].start();
+		replicaManager[2].start();
+
 		
 		repConnection = new RepConnection(port, storageManager, logger);
 		Thread thread = new Thread(repConnection);
@@ -308,6 +319,17 @@ public class KVServer{
 		if(!failureDetector.isAlive())
 			failureDetector.start();
 
+		
+		Server  successor = metadata.getSuccessor(ConsistentHashing.getHashedKey("127.0.0.1" + port));
+		Server  sesuccessor = metadata.getSuccessor(successor.hashedkey);
+		Server preccessor = metadata.getPredecessor(ConsistentHashing.getHashedKey("127.0.0.1" + port));
+		Server  sepreccessor = metadata.getPredecessor(preccessor.hashedkey);
+		
+		replicaManager[0].connect(successor, sesuccessor);
+		replicaManager[1].connect(preccessor, successor);
+		replicaManager[2].connect(sepreccessor, preccessor);
+
+		
     	logger.info("The server is started");
     }
 
@@ -456,7 +478,6 @@ public class KVServer{
     		}
     	}
     	
-    	
 		logger.info("metadata is updated: " + metadata);
     }
             
@@ -467,13 +488,13 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-			kvserver.run(Integer.parseInt(args[0]));
-//			kvserver.run(50000);
+//			kvserver.run(Integer.parseInt(args[0]));
+			kvserver.run(50003);
 
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
 			System.out.println("Usage: Server <port> <cacheSize> <strategy>!");
-			System.exit(1);
+			System.exit(3);
 		}
     }
 	public void setMetadata(Metadata metadata) {
