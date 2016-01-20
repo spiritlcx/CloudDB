@@ -126,6 +126,43 @@ public class KVClient implements ClientSocketListener{
 			
 		} else if(tokens[0].equals("help")) {
 			printHelp();
+			
+		} else if(tokens[0].equals("subscribe")) {
+			if(tokens.length == 3){
+				if(tokens[1].equals("CHANGE") || tokens[1].equals("DELETE")){
+					try {
+						if(client != null){
+							client.subscribe(tokens[1], tokens[2]);
+						} else {
+							printError("You're not connected to the system! Use 'connect <IP> <PORT>'");
+						}
+					} catch (Exception e) {
+						printError("Error while subscribing!");
+						logger.error(e.getMessage());
+					}
+				}
+				else{
+					printError("Invalid parameter! Usage: subscribe CHANGE|DELETE <key>");
+				}
+			} else {
+				printError("Invalid number of parameters!");
+			}
+		} else if(tokens[0].equals("unsubscribe")) {
+			if(tokens.length == 3){
+				if(tokens[1].equals("CHANGE") || tokens[1].equals("DELETE")){
+					try {
+						client.unsubscribe(tokens[1], tokens[2]);
+					} catch (Exception e) {
+						printError("Error while unsubscribing!");
+						logger.error(e.getMessage());
+					}
+				}
+				else{
+					printError("Invalid parameter! Usage: unsubscribe CHANGE|DELETE <key>");
+				}
+			} else {
+				printError("Invalid number of parameters!");
+			}
 		} else {
 			printError("Unknown command");
 			printHelp();
@@ -176,6 +213,11 @@ public class KVClient implements ClientSocketListener{
 		sb.append("\t\t\t changes the logLevel \n");
 		sb.append(PROMPT).append("\t\t\t\t ");
 		sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n");
+		
+		sb.append(PROMPT).append("subscribe CHANGE|DELETE <key>");
+		sb.append("\t\t\t subscribes to change/delete of <key>");
+		sb.append(PROMPT).append("unsubscribe CHANGE|DELETE <key>");
+		sb.append("\t\t\t unsubscribes to change/delete of <key>");
 		
 		sb.append(PROMPT).append("quit ");
 		sb.append("\t\t\t exits the program");
@@ -247,7 +289,7 @@ public class KVClient implements ClientSocketListener{
 		}
 		
 	}
-
+	
 	private void printError(String error){
 		System.out.println(PROMPT + "Error! " +  error);
 	}

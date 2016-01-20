@@ -14,6 +14,7 @@ import org.apache.log4j.Logger;
 import app_kvServer.ServerState.State;
 import common.messages.KVAdminMessage;
 import common.messages.KVAdminMessage.StatusType;
+import common.messages.KVBrokerMessage;
 import common.messages.MessageHandler;
 import ecs.Server;
 import logger.LogSetup;
@@ -66,6 +67,10 @@ public class KVServer{
 	private StorageManager storageManager;
 	private ReplicationManager replicationManager;
 	private FailureDetector failureDetector;
+	
+	//connect to publish/subscribe channel
+	private Socket brokerSocket;
+	private MessageHandler brokerMsgHandler;
 	
     /**
 	 * Start KV Server at given port
@@ -125,7 +130,7 @@ public class KVServer{
 			try {
 				Socket client = serverSocket.accept();
                	ClientConnection connection = 
-                		new ClientConnection(client, serverSocket, metadata);
+                		new ClientConnection(client, serverSocket, metadata, brokerMsgHandler);
                (new Thread(connection)).start();
                 
                 logger.info("Connected to " 
@@ -307,7 +312,20 @@ public class KVServer{
 
 		if(!failureDetector.isAlive())
 			failureDetector.start();
-
+		
+		try {
+    		while(brokerSocket == null){
+	    		try{
+	    			brokerSocket = new Socket(metadata.getBrokerIP(), metadata.getBrokerPort());
+	    		}catch(Exception e){
+	    			e.printStackTrace();
+	    		}
+    		}
+			brokerMsgHandler = new MessageHandler(brokerSocket, logger);			
+		} catch (Exception e) {
+			logger.error(e.getMessage());
+		}
+		
     	logger.info("The server is started");
     }
 
@@ -324,6 +342,12 @@ public class KVServer{
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+    	
+    	try {
+			brokerSocket.close();
+		} catch (IOException e) {
+			logger.error(e.getMessage());
 		}
     }
     
@@ -459,7 +483,7 @@ public class KVServer{
     	
 		logger.info("metadata is updated: " + metadata);
     }
-            
+    
     /**
      * Main entry point for the echo server application. 
      * @param args contains the port number at args[0].
