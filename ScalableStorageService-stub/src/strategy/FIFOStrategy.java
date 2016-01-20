@@ -3,22 +3,10 @@ package strategy;
 import java.util.LinkedList;
 import java.util.List;
 
-public class FIFOStrategy extends Strategy {
+public class FIFOStrategy implements Strategy {
 
 	private List<String> lists = new LinkedList<String>();
 	
-	/**
-	 * Gets the first element of the list and removes it.
-	 */
-	@Override
-	public String get() {
-		if(lists.size() != 0){
-			String target = lists.get(0);
-			lists.remove(0);
-			return target;
-		}
-		return null;
-	}
 
 	/**
 	 * Adds an element to the end of the list if it is not 
@@ -26,8 +14,23 @@ public class FIFOStrategy extends Strategy {
 	 */
 	@Override
 	public void add(String key) {
-		if(!lists.contains(key)){
-			lists.add(key);
+		lists.add(key);
+	}
+
+	@Override
+	public void update(String key) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public String remove(){
+		if(lists.size() != 0){
+			String key = lists.get(0);
+			lists.remove(0);
+			return key;
+		}else{
+			return null;
 		}
 	}
 

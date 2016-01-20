@@ -2,38 +2,12 @@ package strategy;
 
 import java.util.HashMap;
 
-public class LFUStrategy extends Strategy {
+public class LFUStrategy implements Strategy {
 
 	private HashMap<String, Integer> keyrating;
 	
 	public LFUStrategy(){
 		keyrating = new HashMap<String, Integer>();
-	}
-	
-	/**
-	 * Gets the key which has the lowest rating. Rating
-	 * indicates how often the key was used.
-	 */
-	@Override
-	public String get() {
-		Integer lowestRating = Integer.MAX_VALUE;
-		String lowestKey = "";
-		
-		for(String key : keyrating.keySet())
-		{
-			if(lowestRating > keyrating.get(key))
-			{
-				lowestRating = keyrating.get(key);
-				lowestKey = key;
-			}
-		}
-		
-		if(!lowestKey.equals(""))
-		{
-			keyrating.remove(lowestKey);
-			return lowestKey;
-		}
-		return null;
 	}
 
 	/**
@@ -43,15 +17,29 @@ public class LFUStrategy extends Strategy {
 	 */
 	@Override
 	public void add(String key) {
+		keyrating.put(key, 1);
+	}
+
+	@Override
+	public void update(String key) {
+		// TODO Auto-generated method stub
+		keyrating.put(key, keyrating.get(key) + 1);
+	}
+
+	@Override
+	public String remove() {
+		Integer lowestRating = Integer.MAX_VALUE;
+		String lowestKey = null;
 		
-		if(keyrating.containsKey(key)){
-			Integer rating = keyrating.get(key) + 1;
-			keyrating.remove(key);
-			keyrating.put(key, rating);
-		}
-		else
+		for(String key : keyrating.keySet())
 		{
-			keyrating.put(key, 1);
+			if(lowestRating > keyrating.get(key))
+			{
+				lowestRating = keyrating.get(key);
+				lowestKey = key;
+			}
 		}
+		keyrating.remove(lowestKey);
+		return lowestKey;
 	}
 }

@@ -10,6 +10,7 @@ import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 
@@ -17,26 +18,24 @@ import common.messages.TextMessage;
 import client.ClientSocketListener.SocketStatus;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
-
+import ecs.Server;
+import logger.LogSetup;
+import common.messages.MessageHandler;
 import metadata.Metadata;
 
-public class KVStore extends Thread implements KVCommInterface {	
+public class KVStore implements KVCommInterface {	
 	private Logger logger = Logger.getRootLogger();
 	private Set<ClientSocketListener> listeners;
+	private MessageHandler messageHandler;
+	
 	private boolean running;
 	
-	private Socket clientSocket;
-	private OutputStream output;
- 	private InputStream input;
- 	
+	private Socket clientSocket; 	
 	private Metadata metadata;
  	
  	private String address;
  	private int port;
 	
-	private static final int BUFFER_SIZE = 1024;
-	private static final int DROP_SIZE = 1024 * BUFFER_SIZE;
-
 	/**
 	 * Initialize KVStore with address and port of KVServer
 	 * @param address the address of the KVServer
@@ -45,19 +44,19 @@ public class KVStore extends Thread implements KVCommInterface {
 	 * @throws UnknownHostException 
 	 */
 	public KVStore(String address, int port){
-		
 		this.address = address;
 		this.port = port;
 		
 		listeners = new HashSet<ClientSocketListener>();
 		setRunning(true);
-		logger.info("Connection established");
 
 	}
 	
 	public void run() {
 		try {
-			TextMessage receivedMessage = receiveMessage();
+			setRunning(true);
+			byte [] msg = messageHandler.receiveMessage();
+			TextMessage receivedMessage = new TextMessage(msg);
 			for(ClientSocketListener listener : listeners) {
 				listener.handleNewMessage(receivedMessage);
 			}
@@ -70,8 +69,6 @@ public class KVStore extends Thread implements KVCommInterface {
 		setRunning(false);
 		logger.info("Tearing down the connection ...");
 		if (clientSocket != null) {
-			input.close();
-			output.close();
 			clientSocket.close();
 			clientSocket = null;
 			logger.info("Connection closed!");
@@ -90,85 +87,7 @@ public class KVStore extends Thread implements KVCommInterface {
 		listeners.add(listener);
 	}
 	
-	/**
-	 * Method sends a TextMessage using this socket.
-	 * @param msg the message that is to be sent.
-	 * @throws IOException some I/O error regarding the output stream 
-	 */
-	public void sendMessage(TextMessage msg) throws IOException {
-		byte[] msgBytes = msg.getMsgBytes();
-		output.write(msgBytes, 0, msgBytes.length);
-		output.flush();
-		logger.info("Send message:\t '" + msg.getMsg() + "'");
-    }
 	
-	/**
-	 * Receives message from the server and converts it to a TextMessage.
-	 * @return A TextMessage representing server response.
-	 * @throws IOException Some exception while reading the input stream occured
-	 */
-	private TextMessage receiveMessage() throws IOException {
-		
-		int index = 0;
-		byte[] msgBytes = null, tmp = null;
-		byte[] bufferBytes = new byte[BUFFER_SIZE];
-		
-		/* read first char from stream */
-		byte read = (byte) input.read();
-		if(read == -1)
-			return null;
-		
-		boolean reading = true;
-		
-		while(read != 13 && reading) {/* carriage return */
-			/* if buffer filled, copy to msg array */
-			if(index == BUFFER_SIZE) {
-				if(msgBytes == null){
-					tmp = new byte[BUFFER_SIZE];
-					System.arraycopy(bufferBytes, 0, tmp, 0, BUFFER_SIZE);
-				} else {
-					tmp = new byte[msgBytes.length + BUFFER_SIZE];
-					System.arraycopy(msgBytes, 0, tmp, 0, msgBytes.length);
-					System.arraycopy(bufferBytes, 0, tmp, msgBytes.length,
-							BUFFER_SIZE);
-				}
-
-				msgBytes = tmp;
-				bufferBytes = new byte[BUFFER_SIZE];
-				index = 0;
-			} 
-			
-			/* only read valid characters, i.e. letters and numbers */
-			if((read > 31 && read < 127)) {
-				bufferBytes[index] = read;
-				index++;
-			}
-			
-			/* stop reading is DROP_SIZE is reached */
-			if(msgBytes != null && msgBytes.length + index >= DROP_SIZE) {
-				reading = false;
-			}
-			
-			/* read next char from stream */
-			read = (byte) input.read();
-		}
-		
-		if(msgBytes == null){
-			tmp = new byte[index];
-			System.arraycopy(bufferBytes, 0, tmp, 0, index);
-		} else {
-			tmp = new byte[msgBytes.length + index];
-			System.arraycopy(msgBytes, 0, tmp, 0, msgBytes.length);
-			System.arraycopy(bufferBytes, 0, tmp, msgBytes.length, index);
-		}
-		
-		msgBytes = tmp;
-		
-		/* build final String */
-		TextMessage msg = new TextMessage(msgBytes);
-		logger.info("Receive message:\t '" + msg.getMsg() + "'");
-		return msg;
-    }
  	/**
  	 * Opens the socket for connection to the server.
  	 * @throws IOException 
@@ -177,9 +96,11 @@ public class KVStore extends Thread implements KVCommInterface {
 	public void connect() throws IOException, UnknownHostException {
 		try {
 			clientSocket = new Socket(address, port);
-			output = clientSocket.getOutputStream();
-			input = clientSocket.getInputStream();
+			messageHandler = new MessageHandler(clientSocket, logger);
 			
+			run();
+			logger.info("Connection established");
+
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 			logger.error(e.getMessage());
@@ -224,28 +145,25 @@ public class KVStore extends Thread implements KVCommInterface {
 		
 		if(metadata != null)
 		{
-			String[] correctServer = metadata.getServer(key);
+			Server correctServer = metadata.getServerForKey(key);
 			
-			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port)))
+			if(correctServer != null && (!correctServer.ip.equals(this.address) || !correctServer.port.equals(this.port+"")))
 			{
 				disconnect();
-				this.address = correctServer[0];
-				this.port = Integer.parseInt(correctServer[1]);
+				this.address = correctServer.ip;
+				this.port = Integer.parseInt(correctServer.port);
 				connect();
 			}
 		}
 
-		sendMessage(sentMessage.serialize());
+		messageHandler.sendMessage(sentMessage.serialize().getMsg());
 
-		TextMessage receivedMessage = receiveMessage();
-
-		if(receivedMessage == null){
-			running = false;
-			return null;
-		}
+		byte [] msg = messageHandler.receiveMessage();
 		
+		TextMessage receivedMessage = new TextMessage(msg);
+		receivedMessage = receivedMessage.deserialize();
+				
 		if(receivedMessage.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)){
-			receivedMessage = receivedMessage.deserialize();
 			
 			if(receivedMessage.getMetadata() != null){
 				this.metadata = receivedMessage.getMetadata();
@@ -280,30 +198,31 @@ public class KVStore extends Thread implements KVCommInterface {
 		sentMessage.setStatusType(StatusType.GET);
 		sentMessage.setKey(key);
 		
-		if(metadata != null)
-		{
-			String[] correctServer = metadata.getServer(key);
-			
-			if(correctServer != null && (!correctServer[0].equals(this.address) || !correctServer[1].equals(this.port)))
-			{
+		if(metadata != null){
+			Server correctServer = metadata.getServerForKey(key);
+			Server successor = metadata.getSuccessor(correctServer.hashedkey);
+			Server sesuccessor = null;
+			if(successor != null){
+				sesuccessor = metadata.getSuccessor(successor.hashedkey);
+			}
+
+			if((!correctServer.ip.equals(this.address) || !correctServer.port.equals("" + this.port)) && (!sesuccessor.ip.equals(this.address) || !sesuccessor.port.equals("" + this.port)) && (!successor.ip.equals(this.address) || !successor.port.equals("" + this.port))){
 				disconnect();
-				this.address = correctServer[0];
-				this.port = Integer.parseInt(correctServer[1]);
+				this.address = correctServer.ip;
+				this.port = Integer.parseInt(correctServer.port);
 				connect();
 			}
 		}
 		
-		sendMessage(sentMessage.serialize());
+		messageHandler.sendMessage(sentMessage.serialize().getMsg());
 		
-		TextMessage receivedMessage = receiveMessage();
+		byte [] msg = messageHandler.receiveMessage();
+		
+		TextMessage receivedMessage = new TextMessage(msg);
+		receivedMessage = receivedMessage.deserialize();
 
-		if(receivedMessage == null){
-			running = false;
-			return null;
-		}
 		
 		if(receivedMessage.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)){
-			receivedMessage = receivedMessage.deserialize();
 			
 			if(receivedMessage.getMetadata() != null){
 				this.metadata = receivedMessage.getMetadata();
@@ -333,13 +252,13 @@ public class KVStore extends Thread implements KVCommInterface {
 	 * @throws Exception	
 	 */
 	private void reestablishConnection(String key) throws Exception{
-		String[] correctserver = metadata.getServer(key);
+		Server correctserver = metadata.getServerForKey(key);
 		
 		if(correctserver != null)
 		{
 			disconnect();
-			this.address = correctserver[0];
-			this.port = Integer.parseInt(correctserver[1]);
+			this.address = correctserver.ip;
+			this.port = Integer.parseInt(correctserver.port);
 			connect();
 		}
 	}

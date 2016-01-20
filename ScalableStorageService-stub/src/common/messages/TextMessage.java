@@ -1,20 +1,20 @@
 package common.messages;
 
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 
+import ecs.Server;
 import metadata.Metadata;
 
 /**
  * Represents a simple text message, which is intended to be received and sent 
  * by the server.
  */
-public class TextMessage implements Serializable, KVMessage {
+public class TextMessage extends Message implements Serializable, KVMessage {
 
 	private static final long serialVersionUID = 5549512212003782618L;
 	private String msg;
 	private byte[] msgBytes;
-	private static final char LINE_FEED = 0x0A;
-	private static final char RETURN = 0x0D;
 	private String key;
 	private String value;
 	private StatusType statusType;
@@ -47,6 +47,12 @@ public class TextMessage implements Serializable, KVMessage {
 	public TextMessage(String msg) {
 		this.msg = msg.trim();
 		this.msgBytes = toByteArray(this.msg);
+		try {
+			this.msg = new String(msgBytes, "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 
@@ -69,27 +75,6 @@ public class TextMessage implements Serializable, KVMessage {
 		return msgBytes;
 	}
 	
-	private byte[] addCtrChars(byte[] bytes) {
-		byte[] ctrBytes = new byte[]{LINE_FEED, RETURN};
-		byte[] tmp = new byte[bytes.length + ctrBytes.length];
-		
-		System.arraycopy(bytes, 0, tmp, 0, bytes.length);
-		System.arraycopy(ctrBytes, 0, tmp, bytes.length, ctrBytes.length);
-		
-		return tmp;		
-	}
-	
-	private byte[] toByteArray(String s){
-		byte[] bytes = s.getBytes();
-		byte[] ctrBytes = new byte[]{LINE_FEED, RETURN};
-		byte[] tmp = new byte[bytes.length + ctrBytes.length];
-		
-		System.arraycopy(bytes, 0, tmp, 0, bytes.length);
-		System.arraycopy(ctrBytes, 0, tmp, bytes.length, ctrBytes.length);
-		
-		return tmp;		
-	}
-
 	@Override
 	public String getKey() {
 		return key;
@@ -163,7 +148,7 @@ public class TextMessage implements Serializable, KVMessage {
 	 * @return TextMessage with received Status, Key and Value
 	 */
 	public TextMessage deserialize(){
-		TextMessage demessage = new TextMessage();
+		TextMessage demessage = new TextMessage(msgBytes);
 
 		if(msg.charAt(0) != '{' || msg.charAt(msg.length()-1) != '}'){
 			return null;
@@ -192,15 +177,15 @@ public class TextMessage implements Serializable, KVMessage {
 				Metadata tempdata = new Metadata();
 				
 				if(keyvalue.length > 1){
-					String[] datasets = keyvalue[1].split(",");
+					String[] datasets = keyvalue[1].split("<");
 					String[] serverset;
 					
 					for(String dataset: datasets){
-						serverset = dataset.substring(1, msg.length()-1).split(",");
+						serverset = dataset.substring(1, dataset.length()-1).split(" ");
 						
-						if(serverset.length == 4)
+						if(serverset.length == 5)
 						{
-							tempdata.add(serverset[0], serverset[1], serverset[2], serverset[3]);
+							tempdata.add(new Server(serverset[0], serverset[1], serverset[2], serverset[3], serverset[4]));
 						}
 					}
 					

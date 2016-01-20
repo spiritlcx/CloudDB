@@ -3,23 +3,10 @@ package strategy;
 import java.util.LinkedList;
 import java.util.List;
 
-public class LRUStrategy extends Strategy {
+public class LRUStrategy implements Strategy {
 
 	private List<String> lists = new LinkedList<String>();
 	
-	/**
-	 * Returns the last element of the list and removes it.
-	 */
-	@Override
-	public String get() {
-		if(lists.size() != 0){
-			String target = lists.get(lists.size() - 1);
-			lists.remove(lists.size() - 1);
-			return target;
-		}
-		return null;
-	}
-
 	/**
 	 * Removes the key from the list (if it exists) and inserts
 	 * it at the beginning of the list.
@@ -27,12 +14,23 @@ public class LRUStrategy extends Strategy {
 	 */
 	@Override
 	public void add(String key) {
-		if(lists.contains(key)){
-			lists.remove(key);
-		}
-		
 		lists.add(0, key);
 	}
 	
+	@Override
+	public void update(String key) {
+		// TODO Auto-generated method stub
+		lists.remove(key);
+		lists.add(0, key);
+	}
 
+	@Override
+	public String remove() {
+		// TODO Auto-generated method stub
+		if(lists.size() == 0)
+			return null;
+		String key = lists.get(lists.size() - 1);
+		lists.remove(key);
+		return key;
+	}
 }
