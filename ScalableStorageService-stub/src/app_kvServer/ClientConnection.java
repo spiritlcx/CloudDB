@@ -12,6 +12,7 @@ import org.apache.log4j.*;
 import app_kvServer.ServerState.State;
 import common.assist.Operation;
 import common.messages.KVMessage.StatusType;
+import common.messages.KVBrokerMessage;
 import common.messages.MessageHandler;
 import common.messages.TextMessage;
 import ecs.Server;
@@ -38,7 +39,9 @@ public class ClientConnection implements Runnable {
 	
     private ReplicationManager replicationManager;
 	private ReplicaManager [] replicaManagers = new ReplicaManager[3];
-    
+        
+    private MessageHandler brokerMsgHandler;
+	
 	/**
 	 * 
 	 * Constructs a new CientConnection object for a given TCP socket.
@@ -49,15 +52,15 @@ public class ClientConnection implements Runnable {
 	 * @param persistance Instance of Persictance class, which handles the reading and writing to the storage file.
 	 * @param metadata Metadata set of the server.
 	 */
-	public ClientConnection(int port, Socket clientSocket, ServerSocket serverSocket, Metadata metadata, ReplicaManager [] replicaManager) {
+	public ClientConnection(int port, Socket clientSocket, ServerSocket serverSocket, Metadata metadata, ReplicaManager [] replicaManager, MessageHandler brokerMessageHandler) {
 		this.clientSocket = clientSocket;
 		this.serverSocket = serverSocket;
 		this.isOpen = true;
 		this.metadata = metadata;
 		this.replicaManagers = replicaManager;
 		
-		replicationManager= ReplicationManager.getInstance();
-	
+		replicationManager= ReplicationManager.getInstance();	
+		this.brokerMsgHandler = brokerMessageHandler;
 	}
 	
 	/**
@@ -179,10 +182,13 @@ public class ClientConnection implements Runnable {
 			
 			if(isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
 				replicaManagers[0].receiveUpdate(operationHandler);
+				publish(update.key, update.value);
 			}else if(isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
 				replicaManagers[1].receiveUpdate(operationHandler);
+				publish(update.key, update.value);
 			}else if(isSecondReplica("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
 				replicaManagers[2].receiveUpdate(operationHandler);
+				publish(update.key, update.value);
 			}else{
 				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
 				sentMessage.setMetadata(metadata);
@@ -254,4 +260,40 @@ public class ClientConnection implements Runnable {
 		return successor!= null && (sesuccessor.ip.equals(ip) && sesuccessor.port.equals(port));
 		
 	}
+
+	private void publish(String key, String value){
+		if(!value.equals("")){
+			publish("UPDATE", key, value);
+		}
+		else{
+			publish("DELETE", key, value);
+		}
+
+	}
+	
+	private void publish(String type, String key, String value){
+    	if(type.equals("UPDATE")){
+    		KVBrokerMessage sentMessage = new KVBrokerMessage();
+    		sentMessage.setStatus(KVBrokerMessage.StatusType.SUBSCRIBTION_UPDATE);
+    		sentMessage.setKey(key);
+    		sentMessage.setValue(value);
+    		
+    		try {
+				brokerMsgHandler.sendMessage(sentMessage.serialize().getMsg());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+    	}
+    	else if(type.equals("DELETE")){
+    		KVBrokerMessage sentMessage = new KVBrokerMessage();
+    		sentMessage.setStatus(KVBrokerMessage.StatusType.SUBSCRIBTION_UPDATE);
+    		sentMessage.setKey(key);
+    		
+    		try {
+				brokerMsgHandler.sendMessage(sentMessage.serialize().getMsg());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+    	}
+    }
 }
