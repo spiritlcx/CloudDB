@@ -10,6 +10,8 @@ public class Metadata{
 	private TreeMap<String, Server> servers = new TreeMap<String, Server>();
 	public static String start = "00000000000000000000000000000000";
 	public static String end = "ffffffffffffffffffffffffffffffff";
+	
+	private Broker broker;
 
 	public void clear(){
 		servers.clear();
@@ -130,6 +132,18 @@ public class Metadata{
 		}		
 	}
 	
+	public void setBroker(String address, int port){
+		broker = new Broker(address, port);
+	}
+	
+	public String getBrokerIP(){
+		return broker.getAddress();
+	}
+	
+	public int getBrokerPort(){
+		return broker.getPort();
+	}
+	
 	@Override
 	public String toString(){
 		String result = "";
@@ -138,5 +152,31 @@ public class Metadata{
 			result += "<";
 		}
 		return result;
+	}
+}
+
+class Broker{
+	private String address;
+	private int port;
+	
+	public Broker(String address, int port){
+		this.address = address;
+		this.port = port;
+	}
+
+	public String getAddress() {
+		return address;
+	}
+
+	public void setAddress(String address) {
+		this.address = address;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
+	public void setPort(int port) {
+		this.port = port;
 	}
 }

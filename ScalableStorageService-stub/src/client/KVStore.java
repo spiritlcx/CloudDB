@@ -18,6 +18,7 @@ import common.messages.TextMessage;
 import client.ClientSocketListener.SocketStatus;
 import common.messages.KVMessage;
 import common.messages.KVMessage.StatusType;
+import common.messages.KVBrokerMessage;
 import ecs.Server;
 import logger.LogSetup;
 import common.messages.MessageHandler;
@@ -35,6 +36,9 @@ public class KVStore implements KVCommInterface {
  	
  	private String address;
  	private int port;
+ 	
+ 	private Socket subscribeSocket;
+ 	private MessageHandler subscriptionHandler;
 	
 	/**
 	 * Initialize KVStore with address and port of KVServer
@@ -263,4 +267,89 @@ public class KVStore implements KVCommInterface {
 		}
 	}
 	
+	/**
+	 * Creates a TextMessage that is then filled with required values for the
+	 * subscribe command and send to the responsible server.
+	 * @param type	The subscription type, DELETE or CHANGE.
+	 * @param key	The key that the subscription targets.
+	 */
+	public KVMessage subscribe(String type, String key) throws Exception {
+		KVBrokerMessage sentMessage = new KVBrokerMessage();
+		
+		if(type.equals("DELETE")){
+			sentMessage.setStatus(common.messages.KVBrokerMessage.StatusType.SUBSCRIBE_DELETE);
+		}
+		else{
+			sentMessage.setStatus(common.messages.KVBrokerMessage.StatusType.SUBSCRIBE_CHANGE);
+		}
+		sentMessage.setKey(key);
+		
+		if(subscribeSocket == null){
+			try {
+				if(metadata != null){
+					subscribeSocket = new Socket(metadata.getBrokerIP(), metadata.getBrokerPort());
+				} else{
+					subscribeSocket = new Socket("127.0.0.1", 49999);	
+				}
+				subscriptionHandler = new MessageHandler(subscribeSocket, logger);
+				
+				logger.info("Subscription connection established");
+
+			} catch (UnknownHostException e) {
+				logger.error(e.getMessage());
+				throw new UnknownHostException();
+			} catch (IOException e) {
+				logger.error(e.getMessage());
+				throw new IOException();
+			}
+		}
+
+		subscriptionHandler.sendMessage(sentMessage.serialize().getMsg());
+
+		byte [] msg = subscriptionHandler.receiveMessage();
+		
+		TextMessage receivedMessage = new TextMessage(msg);
+		receivedMessage = receivedMessage.deserialize();
+		for(ClientSocketListener listener : listeners) {
+			listener.handleNewMessage(receivedMessage);
+		}
+
+		return (KVMessage)receivedMessage.deserialize();
+	
+	}
+	
+	/**
+	 * Creates a TextMessage that is then filled with required values for the
+	 * unsubscribe command and send to the responsible server.
+	 * @param type	The subscription type, DELETE or CHANGE.
+	 * @param key	The key that the subscription targets.
+	 */
+	public KVMessage unsubscribe(String type, String key) throws Exception {
+		KVBrokerMessage sentMessage = new KVBrokerMessage();
+		
+		if(type.equals("DELETE")){
+			sentMessage.setStatus(common.messages.KVBrokerMessage.StatusType.UNSUBSCRIBE_DELETE);
+		}
+		else{
+			sentMessage.setStatus(common.messages.KVBrokerMessage.StatusType.UNSUBSCRIBE_CHANGE);
+		}
+		sentMessage.setKey(key);
+		
+		if(subscribeSocket == null){
+			throw new Exception();
+		}
+
+		subscriptionHandler.sendMessage(sentMessage.serialize().getMsg());
+
+		byte [] msg = subscriptionHandler.receiveMessage();
+		
+		TextMessage receivedMessage = new TextMessage(msg);
+		receivedMessage = receivedMessage.deserialize();
+		for(ClientSocketListener listener : listeners) {
+			listener.handleNewMessage(receivedMessage);
+		}
+
+		return (KVMessage)receivedMessage.deserialize();
+	
+	}
 }

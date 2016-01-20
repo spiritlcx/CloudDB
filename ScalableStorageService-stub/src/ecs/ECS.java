@@ -34,6 +34,8 @@ public class ECS {
 	private ArrayList<Server> idleservers = new ArrayList<Server>();
 
 	ArrayList<Process> procs = new ArrayList<Process>();
+	
+	
 
 	
 	public ECS(){
@@ -73,7 +75,7 @@ public class ECS {
 								String hashedkey = ConsistentHashing.getHashedKey(ipport[0] + ipport[1]);
 
 								if(hashthreads.remove(hashedkey) != null){
-									Server toremove = metadata.getServer(hashedkey);
+									final Server toremove = metadata.getServer(hashedkey);
 
 									logger.info("server with ip:" + ipport[0] + " and port:" + ipport[1] + " has failed");
 
@@ -137,6 +139,8 @@ public class ECS {
 				for(Server server : metadata.getServers().values()){
 					logger.info(server);
 				}
+				
+				metadata.setBroker("127.0.0.1", 49999);
 				
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -408,6 +412,10 @@ public class ECS {
 		
 								break;
 							}
+							else if(receivedport == metadata.getBrokerPort()){
+								hashthreads.put("BrokerService", connection);
+								break;
+							}
 						}
 					}
 		
@@ -453,6 +461,13 @@ public class ECS {
 				// TODO Auto-generated catch block
 				System.out.println("failed");
 			}
+		}
+		
+		try {
+			proc = run.exec("java -jar ./ms5-broker.jar 127.0.0.1 " + metadata.getFirstServer().port + " 49999");
+			procs.add(proc);
+		} catch (IOException e) {
+			System.out.println("failed");
 		}
 	}
 }
