@@ -38,8 +38,8 @@ public class MessageHandler {
 		
 		/* read first char from stream */
 		byte read = (byte) input.read();
-		if(read == -1)
-			throw new IOException();
+//		if(read == -1)
+//			throw new IOException();
 		
 		boolean reading = true;
 		

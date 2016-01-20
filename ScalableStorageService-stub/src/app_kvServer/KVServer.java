@@ -487,8 +487,8 @@ public class KVServer{
     public static void main(String[] args) {
     	try {
 			KVServer kvserver = new KVServer();
-//			kvserver.run(Integer.parseInt(args[0]));
-			kvserver.run(50003);
+			kvserver.run(Integer.parseInt(args[0]));
+//			kvserver.run(50003);
 
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");

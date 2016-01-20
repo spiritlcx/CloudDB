@@ -5,7 +5,6 @@ import java.io.UnsupportedEncodingException;
 import ecs.Server;
 import metadata.Metadata;
 
-
 public class KVAdminMessage extends Message{
 	public enum StatusType {
 		INIT,
