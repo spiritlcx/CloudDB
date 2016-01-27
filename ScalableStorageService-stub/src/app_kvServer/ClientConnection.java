@@ -52,7 +52,7 @@ public class ClientConnection implements Runnable {
 	 * @param persistance Instance of Persictance class, which handles the reading and writing to the storage file.
 	 * @param metadata Metadata set of the server.
 	 */
-	public ClientConnection(int port, Socket clientSocket, ServerSocket serverSocket, Metadata metadata, ReplicaManager [] replicaManager, MessageHandler brokerMessageHandler) {
+	public ClientConnection(int port, Socket clientSocket, ServerSocket serverSocket, Metadata metadata, ReplicaManager [] replicaManager) {
 		this.clientSocket = clientSocket;
 		this.serverSocket = serverSocket;
 		this.isOpen = true;
@@ -60,7 +60,6 @@ public class ClientConnection implements Runnable {
 		this.replicaManagers = replicaManager;
 		
 		replicationManager= ReplicationManager.getInstance();	
-		this.brokerMsgHandler = brokerMessageHandler;
 	}
 	
 	/**
@@ -137,7 +136,6 @@ public class ClientConnection implements Runnable {
 			update.value = receivedMessage.getValue();
 			update.prev = receivedMessage.getPrev();
 			update.sequence = receivedMessage.getSequence();
-			System.out.println("sequence:"+update.sequence);
 			put(update);
 		}
 			break;
@@ -182,13 +180,10 @@ public class ClientConnection implements Runnable {
 			
 			if(isCoordinator("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
 				replicaManagers[0].receiveUpdate(operationHandler);
-				publish(update.key, update.value);
 			}else if(isReplica("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
 				replicaManagers[1].receiveUpdate(operationHandler);
-				publish(update.key, update.value);
 			}else if(isSecondReplica("127.0.0.1", ""+serverSocket.getLocalPort(), update.key)){
 				replicaManagers[2].receiveUpdate(operationHandler);
-				publish(update.key, update.value);
 			}else{
 				sentMessage.setStatusType(StatusType.SERVER_NOT_RESPONSIBLE);
 				sentMessage.setMetadata(metadata);

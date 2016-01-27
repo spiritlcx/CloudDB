@@ -114,7 +114,6 @@ public class StorageManager {
 				type = StatusType.PUT_ERROR;
 			}
 		}
-		System.out.println(type);
 		return type;
 	}	
 	public static void main(String [] args){

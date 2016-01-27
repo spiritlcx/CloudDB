@@ -5,6 +5,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
@@ -20,6 +21,10 @@ import store.StorageManager;
 class OperationHandler{
 	Operation operation;
 	MessageHandler messageHandler;
+}
+
+class T{
+	static long gossip = 10000;
 }
 
 public class ReplicaManager extends Thread{
@@ -128,8 +133,39 @@ public class ReplicaManager extends Thread{
 				}
 			}
 		}.start();
+
+		Random random = new Random();
+		
+		new Thread(){
+			public void run(){
+				while(!server.isClosed()){
+					try {
+						Thread.sleep(T.gossip);
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+
+					int i =random.nextInt(2);
+										
+					if(messageSender[i] != null){
+						try {
+							messageSender[i].sendMessage(getGossip().serialize());
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+		}.start();
 	}
 
+	public void refresh(){
+		messageReceiver[0] = null;
+		messageReceiver[1] = null;
+	}
+	
 	//connect to server on other replica managers
 	public void connect(Server server1, Server server2){
 		
@@ -279,16 +315,6 @@ public class ReplicaManager extends Thread{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
-		
-		for(MessageHandler sender: messageSender){
-			try {
-				sender.sendMessage(getGossip().serialize());
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
 		
 		return ts;
 	}
@@ -298,12 +324,14 @@ public class ReplicaManager extends Thread{
 		tableTimestamp[gossipMessage.identifier] = gossipMessage.replicaTimestamp;
 		
 		Log gossipLog = gossipMessage.replicaLog;
+		if(gossipLog == null)
+			return;
 		TreeSet<Log.Record> gossipRecords = gossipLog.getRecords();
 		
 		Iterator<Log.Record> it = gossipRecords.iterator();
 		while(it.hasNext()){
 			Log.Record record = (Log.Record)it.next();
-			if(!(record.ts.compare(replicaTimestamp) < 0)){
+			if(!(record.ts.compare(replicaTimestamp) < 0) && !executedTable.contains(record.sequence)){
 				log.add(record);
 			}
 		}
@@ -350,12 +378,18 @@ public class ReplicaManager extends Thread{
 		while(it.hasNext()){
 			Log.Record record = (Log.Record)it.next();
 			boolean flag = true;
+			int i = 0;
 			for(Timestamp timestamp : tableTimestamp){
-				if(!(record.ts.compare(timestamp) < 0))
+				if(identifier == i )
+					continue;
+				if(!(record.ts.compare(timestamp) < 0)){
 					flag = false;
+				}
+				i++;
 			}
-			if(flag)
+			if(flag){
 				it.remove();
+			}
 		}
 	}
 
@@ -438,7 +472,8 @@ class GossipMessage{
 				gossipMessage.replicaTimestamp = Timestamp.deserialize(contents[1]);
 				break;
 			case "log":
-				gossipMessage.replicaLog = Log.deserialize(contents[1]);
+				if(contents.length == 2)
+					gossipMessage.replicaLog = Log.deserialize(contents[1]);
 				break;
 			}
 		}
@@ -511,7 +546,6 @@ class Log{
 
 	public static Log deserialize(String s){
 		TreeSet<Record> records = new TreeSet<Record>();
-//		{id:(0,ts:(1 0 0 ,uoperation:(key:aa,:value:bb,uprev:(0 0 0 },,{id:(1,ts:(1 1 0 ,uoperation:(key:bb,:value:bb,uprev:(1 0 0 },,
 		String [] rstrings = s.split(",,");
 		Log log = new Log();
 
@@ -547,4 +581,3 @@ class Log{
 		return log;
 	}
 }
-

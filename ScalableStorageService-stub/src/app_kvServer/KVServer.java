@@ -70,9 +70,6 @@ public class KVServer{
 	private FailureDetector failureDetector;
 	
 	private ReplicaManager [] replicaManager = new ReplicaManager[3];
-	//connect to publish/subscribe channel
-	private Socket brokerSocket;
-	private MessageHandler brokerMsgHandler;
 	
     /**
 	 * Start KV Server at given port
@@ -132,7 +129,7 @@ public class KVServer{
 			try {
 				Socket client = serverSocket.accept();
                	ClientConnection connection = 
-                		new ClientConnection(port, client, serverSocket, metadata, replicaManager, brokerMsgHandler);
+                		new ClientConnection(port, client, serverSocket, metadata, replicaManager);
                (new Thread(connection)).start();
                 
                 logger.info("Connected to " 
@@ -324,32 +321,10 @@ public class KVServer{
 			failureDetector.start();
 
 		
-		Server  successor = metadata.getSuccessor(ConsistentHashing.getHashedKey("127.0.0.1" + port));
-		Server  sesuccessor = metadata.getSuccessor(successor.hashedkey);
-		Server preccessor = metadata.getPredecessor(ConsistentHashing.getHashedKey("127.0.0.1" + port));
-		Server  sepreccessor = metadata.getPredecessor(preccessor.hashedkey);
-		
-		replicaManager[0].connect(successor, sesuccessor);
-		replicaManager[1].connect(preccessor, successor);
-		replicaManager[2].connect(sepreccessor, preccessor);
-
-		
-		try {
-    		while(brokerSocket == null){
-	    		try{
-	    			brokerSocket = new Socket(metadata.getBrokerIP(), metadata.getBrokerPort());
-	    		}catch(Exception e){
-	    			e.printStackTrace();
-	    		}
-    		}
-			brokerMsgHandler = new MessageHandler(brokerSocket, logger);			
-		} catch (Exception e) {
-			logger.error(e.getMessage());
-		}
-		
+		buildReplicaManager();
     	logger.info("The server is started");
     }
-
+    
     /**
      * Stops the KVServer, all client requests are rejected and only 
 		ECS requests are processed.
@@ -365,11 +340,6 @@ public class KVServer{
 			e.printStackTrace();
 		}
     	
-    	try {
-			brokerSocket.close();
-		} catch (IOException e) {
-			logger.error(e.getMessage());
-		}
     }
     
     /**
@@ -500,9 +470,34 @@ public class KVServer{
     		}
     	}
     	
+    	refreshReplicaManager();
+    	buildReplicaManager();
+    	
 		logger.info("metadata is updated: " + metadata);
     }
     
+
+    public void setMetadata(Metadata metadata) {
+		this.metadata = metadata;
+	}
+
+    private void refreshReplicaManager(){
+    	replicaManager[0].refresh();
+    	replicaManager[1].refresh();
+    	replicaManager[2].refresh();
+    }
+    
+	private void buildReplicaManager(){
+		Server  successor = metadata.getSuccessor(ConsistentHashing.getHashedKey("127.0.0.1" + port));
+		Server  sesuccessor = metadata.getSuccessor(successor.hashedkey);
+		Server preccessor = metadata.getPredecessor(ConsistentHashing.getHashedKey("127.0.0.1" + port));
+		Server  sepreccessor = metadata.getPredecessor(preccessor.hashedkey);
+		
+		replicaManager[0].connect(successor, sesuccessor);
+		replicaManager[1].connect(preccessor, successor);
+		replicaManager[2].connect(sepreccessor, preccessor);
+
+    }
     /**
      * Main entry point for the echo server application. 
      * @param args contains the port number at args[0].
@@ -511,7 +506,7 @@ public class KVServer{
     	try {
 			KVServer kvserver = new KVServer();
 			kvserver.run(Integer.parseInt(args[0]));
-//			kvserver.run(50003);
+//			kvserver.run(50007);
 
 		}catch (NumberFormatException nfe) {
 			System.out.println("Error! Invalid argument <port> or <cacheSize>! Not a number!");
@@ -519,7 +514,5 @@ public class KVServer{
 			System.exit(3);
 		}
     }
-	public void setMetadata(Metadata metadata) {
-		this.metadata = metadata;
-	}
+
 }
